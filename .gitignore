@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+ENV/
+
+# Environment
+.env
+*.db
+*.sqlite
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Data
+data/
+models/
+knowledge_base/
+*.pkl
+*.npy
+*.npz
+
+# Node
+node_modules/
+web/node_modules/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Vector store cache
+data/vector_store_shared/
