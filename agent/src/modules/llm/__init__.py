@@ -1,14 +1,16 @@
 """
 LLM 模块
-支持多种大语言模型的接入
+基于 DashScope API 的 qwen-plus 调用封装
 """
 
-from .qwen_client import QwenLLM, QwenConfig, create_qwen_client, get_llm_client, init_llm_client
+from .qwen_client import (
+    QwenLLM,
+    QwenConfig,
+    create_qwen_client,
+)
 
 __all__ = [
     "QwenLLM",
     "QwenConfig",
     "create_qwen_client",
-    "get_llm_client",
-    "init_llm_client",
 ]

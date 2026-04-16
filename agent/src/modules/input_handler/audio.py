@@ -133,14 +133,14 @@ class AudioInputHandler:
         )
     
     async def _transcribe(self, audio_input: AudioInput) -> str:
-        """ASR转写"""
-        # 如果有Whisper模型，使用它进行转写
+        """ASR转写（优先 Whisper，备选通义千问）"""
+        # 1. 优先使用 Whisper
         if self.whisper_model:
             audio_bytes = await self._get_audio_bytes(audio_input)
             result = await self._whisper_transcribe(audio_bytes)
             return result
 
-        # 尝试自动加载Whisper模型
+        # 2. 尝试自动加载 Whisper
         whisper_model = self._get_whisper_model()
         if whisper_model:
             self.whisper_model = whisper_model
@@ -148,7 +148,23 @@ class AudioInputHandler:
             result = await self._whisper_transcribe(audio_bytes)
             return result
 
-        # 模拟转写结果
+        # 3. 使用通义千问 ASR（需要 dashscope）
+        audio_bytes = await self._get_audio_bytes(audio_input)
+        if audio_bytes:
+            # 根据 MIME 类型推断格式
+            mime_to_ext = {
+                "audio/mp4": "m4a", "audio/x-m4a": "m4a",
+                "audio/webm": "webm", "audio/ogg": "ogg",
+                "audio/wav": "wav", "audio/mpeg": "mp3"
+            }
+            import mimetypes
+            fmt = mime_to_ext.get(audio_input.metadata.get("mime_type", ""), "mp3") if audio_input.metadata else "mp3"
+            from src.modules.llm.qwen_client import speech_to_text
+            text = await speech_to_text(audio_bytes, format=fmt, language="zh")
+            if text:
+                print(f"[ASR] Qwen识别: {text}")
+                return text
+
         return "[这是语音转写文本的占位符]"
     
     async def _get_audio_bytes(self, audio_input: AudioInput) -> bytes:

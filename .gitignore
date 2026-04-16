@@ -10,11 +10,15 @@ build/
 .venv/
 venv/
 ENV/
+env/
 
 # Environment
 .env
+.env.local
+.env.example
 *.db
 *.sqlite
+*.sqlite3
 
 # IDE
 .idea/
@@ -28,6 +32,9 @@ knowledge_base/
 *.pkl
 *.npy
 *.npz
+*.bin
+*.rar
+data.rar
 
 # Node
 node_modules/
@@ -43,3 +50,19 @@ Thumbs.db
 
 # Vector store cache
 data/vector_store_shared/
+data/vector_store_default/
+
+# ML models cache
+.cache/
+.huggingface/
+transformers/
+
+# Test
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Temp
+*.tmp
+*.bak
+*~

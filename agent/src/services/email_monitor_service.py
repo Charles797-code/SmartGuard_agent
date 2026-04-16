@@ -95,22 +95,22 @@ class EmailMonitorService:
                 print(f"[EmailMonitor] LLM初始化失败: {e}")
                 self._llm_client = None
         return self._llm_client
-    
+
     def _encrypt_password(self, password: str) -> str:
         """简单加密密码"""
         return base64.b64encode(password.encode()).decode()
-    
+
     def _decrypt_password(self, encrypted: str) -> str:
         """解密密码"""
         try:
             return base64.b64decode(encrypted.encode()).decode()
         except:
             return ""
-    
+
     def _detect_imap_server(self, email_address: str) -> Dict[str, Any]:
         """根据邮箱地址推断IMAP服务器"""
         domain = email_address.split("@")[-1].lower()
-        
+
         if "qq" in domain:
             return self.IMAP_SERVERS["qq"]
         elif "gmail" in domain:
@@ -123,7 +123,7 @@ class EmailMonitorService:
             return self.IMAP_SERVERS["outlook"]
         else:
             return self.IMAP_SERVERS["qq"]
-    
+
     def _decode_email_header(self, encoded_str: str) -> str:
         """解码邮件标题"""
         if not encoded_str:
@@ -139,7 +139,7 @@ class EmailMonitorService:
             else:
                 result.append(part)
         return ''.join(result)
-    
+
     def _get_email_body(self, msg) -> str:
         """获取邮件正文"""
         body = ""
@@ -147,7 +147,7 @@ class EmailMonitorService:
             for part in msg.walk():
                 content_type = part.get_content_type()
                 content_disposition = str(part.get("Content-Disposition"))
-                
+
                 if content_type == "text/plain" and "attachment" not in content_disposition:
                     try:
                         charset = part.get_content_charset() or 'utf-8'
@@ -167,24 +167,24 @@ class EmailMonitorService:
                 body = msg.get_payload(decode=True).decode(charset, errors='replace')
             except:
                 pass
-        
+
         body = re.sub(r'<[^>]+>', ' ', body)
         body = re.sub(r'\s+', ' ', body)
         return body.strip()
-    
+
     async def _analyze_with_llm(self, subject: str, body: str, sender: str) -> Dict[str, Any]:
         """
         使用LLM分析邮件内容
-        
+
         Returns:
             LLM分析结果
         """
         llm_client = self._get_llm_client()
-        
+
         if not llm_client or not llm_client.is_available:
             # LLM不可用时使用规则匹配
             return self._analyze_with_rules(subject, body, sender)
-        
+
         system_prompt = """你是邮件安全分析专家，负责分析邮件内容并判断是否存在诈骗风险。
 
 分析要求：
@@ -205,41 +205,41 @@ class EmailMonitorService:
         user_message = f"""邮件标题: {subject}
 发件人: {sender}
 邮件正文: {body[:2000]}"""  # 限制正文长度
-        
+
         try:
             messages = [{"role": "user", "content": user_message}]
             response = await llm_client.chat(messages, system_prompt=system_prompt)
-            
+
             # 解析LLM返回的结果
             risk_level = 0
             risk_type = "normal"
             analysis = ""
             detected_keywords = []
-            
+
             # 提取风险等级
             level_match = re.search(r'风险等级:\s*(\d+)', response)
             if level_match:
                 risk_level = int(level_match.group(1))
-            
+
             # 提取风险类型
             type_match = re.search(r'风险类型:\s*(\w+)', response)
             if type_match:
                 risk_type = type_match.group(1)
-            
+
             # 提取分析内容
             analysis_match = re.search(r'\[分析内容\.\.\.\](.*?)(?=\[|$)', response, re.DOTALL)
             if analysis_match:
                 analysis = analysis_match.group(1).strip()
-            
+
             # 提取可疑特征
             features_match = re.search(r'可疑特征:\s*(.+?)(?:\n|$)', response)
             if features_match:
                 features = features_match.group(1)
                 detected_keywords = [k.strip() for k in features.split(',') if k.strip()]
-            
+
             # 计算风险评分
             scam_score = min(risk_level / 5.0, 1.0)
-            
+
             return {
                 "scam_score": scam_score,
                 "risk_level": risk_level,
@@ -249,19 +249,19 @@ class EmailMonitorService:
                 "detected_patterns": [],
                 "method": "llm"
             }
-            
+
         except Exception as e:
             print(f"[EmailMonitor] LLM分析失败: {e}")
             return self._analyze_with_rules(subject, body, sender)
-    
+
     def _analyze_with_rules(self, subject: str, body: str, sender: str) -> Dict[str, Any]:
         """使用规则分析邮件"""
         combined_text = f"{subject} {body} {sender}".lower()
-        
+
         detected_keywords = []
         detected_patterns = []
         risk_score = 0.0
-        
+
         for level, keywords in self.SCAM_KEYWORDS.items():
             for keyword in keywords:
                 if keyword.lower() in combined_text:
@@ -275,16 +275,16 @@ class EmailMonitorService:
                         risk_score += 0.25
                     elif level == "medium_risk":
                         risk_score += 0.1
-        
+
         for pattern_info in self.SCAM_PATTERNS:
             for pattern in pattern_info["patterns"]:
                 if pattern.lower() in combined_text:
                     detected_patterns.append(pattern_info["name"])
                     risk_score += 0.15
                     break
-        
+
         risk_score = min(risk_score, 1.0)
-        
+
         if risk_score >= 0.7:
             risk_level = 5
         elif risk_score >= 0.4:
@@ -293,7 +293,7 @@ class EmailMonitorService:
             risk_level = 2
         else:
             risk_level = 0
-        
+
         return {
             "scam_score": risk_score,
             "risk_level": risk_level,
@@ -303,7 +303,7 @@ class EmailMonitorService:
             "detected_patterns": list(set(detected_patterns)),
             "method": "rules"
         }
-    
+
     def _guess_risk_type(self, text: str) -> str:
         """根据内容猜测风险类型"""
         if any(k in text for k in ["公安", "警察", "检察院", "法院", "通缉", "洗钱"]):
@@ -317,11 +317,11 @@ class EmailMonitorService:
         if any(k in text for k in ["中奖", "奖品", "领取"]):
             return "prize_fraud"
         return "scam_other"
-    
+
     async def _analyze_email(self, subject: str, body: str, sender: str) -> Dict[str, Any]:
         """分析邮件（优先使用LLM）"""
         return await self._analyze_with_llm(subject, body, sender)
-    
+
     async def add_email_config(
         self,
         user_id: str,
@@ -331,10 +331,10 @@ class EmailMonitorService:
     ) -> Dict[str, Any]:
         """添加邮件监控配置"""
         imap_info = self._detect_imap_server(email_address)
-        
+
         config_id = f"emc_{uuid.uuid4().hex[:12]}"
         now = time.time()
-        
+
         config = {
             "id": config_id,
             "user_id": user_id,
@@ -350,37 +350,37 @@ class EmailMonitorService:
             "created_at": now,
             "updated_at": now
         }
-        
+
         await self.db.insert("email_monitor_configs", config)
         await self.start_monitoring(config_id)
-        
+
         return {
             "success": True,
             "config_id": config_id,
             "message": f"邮件监控已配置完成，每5分钟自动检测一次",
             "imap_server": imap_info["host"]
         }
-    
+
     async def remove_email_config(self, config_id: str, user_id: str) -> bool:
         """移除邮件监控配置"""
         await self.stop_monitoring(config_id)
-        
+
         configs = await self.db.query("email_monitor_configs", {
             "id": config_id,
             "user_id": user_id
         }, limit=1)
-        
+
         if configs:
             await self.db.delete("email_monitor_configs", config_id)
             return True
         return False
-    
+
     async def get_user_configs(self, user_id: str) -> List[Dict]:
         """获取用户的所有邮件监控配置"""
         configs = await self.db.query("email_monitor_configs", {
             "user_id": user_id
         })
-        
+
         result = []
         for config in configs:
             result.append({
@@ -394,9 +394,9 @@ class EmailMonitorService:
                 "last_check_status": config.get("last_check_status", "never"),
                 "created_at": config.get("created_at")
             })
-        
+
         return result
-    
+
     async def update_config_status(self, config_id: str, status: str):
         """更新配置状态"""
         await self.db.update("email_monitor_configs", config_id, {
@@ -404,59 +404,59 @@ class EmailMonitorService:
             "last_check_status": status,
             "last_check_at": time.time()
         })
-    
+
     async def _fetch_and_analyze_emails(self, config: Dict) -> List[Dict]:
         """获取并分析邮件"""
         results = []
-        
+
         try:
             password = self._decrypt_password(config["password_encrypted"])
-            
+
             if config.get("use_ssl"):
                 mail = imaplib.IMAP4_SSL(config["imap_host"], config["imap_port"])
             else:
                 mail = imaplib.IMAP4(config["imap_host"], config["imap_port"])
-            
+
             mail.login(config["username"], password)
             mail.select("INBOX")
-            
+
             import datetime
             date = (datetime.datetime.now() - datetime.timedelta(days=7)).strftime("%d-%b-%Y")
             _, messages = mail.search(None, f'SINCE {date} UNSEEN')
-            
+
             mail_ids = messages[0].split()
-            
+
             for mail_id in mail_ids:
                 try:
                     _, msg_data = mail.fetch(mail_id, "(RFC822)")
                     raw_email = msg_data[0][1]
                     msg = email.message_from_bytes(raw_email)
-                    
+
                     subject = self._decode_email_header(msg.get("Subject", ""))
                     sender = self._decode_email_header(msg.get("From", ""))
                     date_str = msg.get("Date", "")
                     body = self._get_email_body(msg)
-                    
+
                     email_date = 0
                     try:
                         from email.utils import parsedate_to_datetime
                         email_date = parsedate_to_datetime(date_str).timestamp()
                     except:
                         email_date = time.time()
-                    
+
                     existing = await self.db.query("email_monitor_logs", {
                         "config_id": config["id"],
                         "email_subject": subject[:100]
                     }, limit=1)
-                    
+
                     if existing:
                         continue
-                    
+
                     # 使用LLM分析邮件
                     analysis = await self._analyze_email(subject, body, sender)
-                    
+
                     log_id = f"eml_{uuid.uuid4().hex[:12]}"
-                    
+
                     log_entry = {
                         "id": log_id,
                         "config_id": config["id"],
@@ -472,9 +472,9 @@ class EmailMonitorService:
                         "is_read": 0,
                         "created_at": time.time()
                     }
-                    
+
                     await self.db.insert("email_monitor_logs", log_entry)
-                    
+
                     # 返回高风险以上的检测结果
                     if analysis["scam_score"] >= 0.2:
                         results.append({
@@ -488,52 +488,52 @@ class EmailMonitorService:
                             "keywords": analysis["detected_keywords"],
                             "patterns": analysis["detected_patterns"]
                         })
-                
+
                 except Exception as e:
                     print(f"处理邮件失败: {e}")
                     continue
-            
+
             mail.store(mail_ids[-1] if mail_ids else b'1', '+FLAGS', '\\Seen')
             mail.logout()
-            
+
             await self.update_config_status(config["id"], "success")
-            
+
         except Exception as e:
             print(f"获取邮件失败: {e}")
             await self.update_config_status(config["id"], f"error: {str(e)}")
-        
+
         return results
-    
+
     async def start_monitoring(self, config_id: str):
         """启动对指定配置的监控"""
         if config_id in self._monitoring_tasks:
             return
-        
+
         config = await self.db.query("email_monitor_configs", {"id": config_id}, limit=1)
         if not config:
             return
-        
+
         config = config[0]
         if not config.get("is_active"):
             return
-        
+
         task = asyncio.create_task(self._monitor_loop(config))
         self._monitoring_tasks[config_id] = task
         self._running = True
-    
+
     async def stop_monitoring(self, config_id: str):
         """停止对指定配置的监控"""
         if config_id in self._monitoring_tasks:
             self._monitoring_tasks[config_id].cancel()
             del self._monitoring_tasks[config_id]
-        
+
         if not self._monitoring_tasks:
             self._running = False
-    
+
     async def _monitor_loop(self, config: Dict):
         """监控循环"""
         interval = config.get("check_interval", 300)
-        
+
         asyncio.create_task(self._fetch_and_analyze_emails(config))
         while True:
             try:
@@ -542,27 +542,27 @@ class EmailMonitorService:
                 break
             except Exception as e:
                 print(f"监控出错: {e}")
-            
+
             await asyncio.sleep(interval)
-    
+
     async def start_all_monitoring(self):
         """启动所有活跃的监控配置"""
         configs = await self.db.query("email_monitor_configs", {"is_active": 1})
-        
+
         for config in configs:
             await self.start_monitoring(config["id"])
-    
+
     async def stop_all_monitoring(self):
         """停止所有监控"""
         for config_id in list(self._monitoring_tasks.keys()):
             await self.stop_monitoring(config_id)
-    
+
     async def get_user_alerts(self, user_id: str, limit: int = 50) -> List[Dict]:
         """获取用户的邮件监控预警"""
         logs = await self.db.query("email_monitor_logs", {"user_id": user_id})
-        
+
         logs.sort(key=lambda x: x.get("created_at", 0), reverse=True)
-        
+
         result = []
         for log in logs[:limit]:
             result.append({
@@ -578,16 +578,16 @@ class EmailMonitorService:
                 "is_read": bool(log.get("is_read", 0)),
                 "created_at": log.get("created_at")
             })
-        
+
         return result
-    
+
     async def mark_alert_read(self, log_id: str, user_id: str):
         """标记预警为已读"""
         await self.db.update("email_monitor_logs", log_id, {
             "id": log_id,
             "is_read": 1
         })
-    
+
     async def get_unread_alert_count(self, user_id: str) -> int:
         """获取未读预警数量"""
         logs = await self.db.query("email_monitor_logs", {

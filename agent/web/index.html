@@ -1477,7 +1477,7 @@
             localStorage.removeItem('smartguard_user_role');
             authToken = null;
             currentUser = null;
-            
+
             document.getElementById('adminApp').style.display = 'none';
             document.getElementById('authPage').style.display = 'flex';
             switchAuthTab('admin-login');
@@ -1499,7 +1499,7 @@
                     adminStats = await res.json();
                 }
             } catch (e) {}
-            
+
             renderAdminPage(currentAdminPage);
         }
 
@@ -1534,14 +1534,14 @@
                 '<div class="admin-stat-card danger"><div class="stat-icon">📚</div><div class="stat-value">' + (adminStats.total_reports || 0) + '</div><div class="stat-label">总举报数</div></div></div>' +
                 '<div class="admin-card"><div class="admin-card-title">📈 诈骗类型分布</div>' +
                 '<div id="adminTypeStats"></div></div>';
-            
+
             renderAdminTypeStats();
         }
 
         function renderAdminTypeStats() {
             var container = document.getElementById('adminTypeStats');
             if (!container || !adminStats.by_type) { return; }
-            
+
             var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;">';
             Object.entries(adminStats.by_type).forEach(function(arr) {
                 html += '<div style="padding:12px;background:rgba(255,255,255,0.05);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">' +
@@ -1561,7 +1561,7 @@
                 '<button class="admin-tab" onclick="loadAdminReportsTab(\'rejected\', this)">已驳回</button>' +
                 '</div>' +
                 '<div class="admin-card"><div id="adminReportsList"></div></div>';
-            
+
             var firstTab = document.querySelector('#adminMainContent .admin-tabs .admin-tab');
             await loadAdminReportsTab('pending', firstTab);
         }
@@ -1573,29 +1573,29 @@
                 shell.querySelectorAll('.admin-tabs .admin-tab').forEach(function(t) { t.classList.remove('active'); });
             }
             if (btn) btn.classList.add('active');
-            
+
             var listContainer = document.getElementById('adminReportsList');
             listContainer.innerHTML = '<div style="text-align:center;padding:40px;color:rgba(255,255,255,0.5);">加载中...</div>';
-            
+
             try {
                 var token = (authToken || localStorage.getItem('smartguard_token') || '').trim();
                 var url = status === 'pending' ? '/admin/reports/pending' : '/admin/reports/all';
                 var res = await fetch(API_BASE + url + '?page=1&page_size=100' + (status !== 'pending' ? '&status=' + status : ''), {
                     headers: { 'Authorization': 'Bearer ' + token }
                 });
-                
+
                 if (!res.ok) throw new Error('加载失败');
-                
+
                 var data = await res.json();
                 var reports = data.reports || [];
-                
+
                 if (reports.length === 0) {
                     listContainer.innerHTML = '<div style="text-align:center;padding:60px;color:rgba(255,255,255,0.5);">暂无数据</div>';
                     return;
                 }
-                
+
                 var html = '<table class="admin-table"><thead><tr><th>ID</th><th>类型</th><th>内容摘要</th><th>举报人</th><th>时间</th><th>关键词</th><th>状态</th><th>操作</th></tr></thead><tbody>';
-                
+
                 reports.forEach(function(r) {
                     var statusBadge = '<span class="admin-badge ' + r.status + '">' + r.status_name + '</span>';
                     var actionBtns = '';
@@ -1603,7 +1603,7 @@
                         actionBtns = '<button class="admin-btn admin-btn-success admin-btn-sm" onclick="adminVerifyReport(\'' + r.report_id + '\')">确认</button> ' +
                                      '<button class="admin-btn admin-btn-danger admin-btn-sm" onclick="adminRejectReport(\'' + r.report_id + '\')">驳回</button>';
                     }
-                    
+
                     html += '<tr>' +
                         '<td style="font-size:12px;color:rgba(255,255,255,0.4);">' + r.report_id + '</td>' +
                         '<td>' + getScamTypeIcon(r.scam_type_name) + ' ' + r.scam_type_name + '</td>' +
@@ -1614,10 +1614,10 @@
                         '<td>' + statusBadge + '</td>' +
                         '<td>' + actionBtns + '</td></tr>';
                 });
-                
+
                 html += '</tbody></table>';
                 listContainer.innerHTML = html;
-                
+
             } catch (e) {
                 listContainer.innerHTML = '<div style="text-align:center;padding:60px;color:#ef4444;">加载失败: ' + e.message + '</div>';
             }
@@ -1639,12 +1639,12 @@
                     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
                     body: JSON.stringify({ report_ids: reportIds, action: action })
                 });
-                
+
                 if (!res.ok) throw new Error('操作失败');
-                
+
                 var data = await res.json();
                 showToast(data.message, 'success');
-                
+
                 // 刷新列表
                 if (currentAdminPage === 'reports') {
                     var shell = document.getElementById('adminMainContent');
@@ -1652,7 +1652,7 @@
                     await loadAdminReportsTab(currentAdminReportStatus, tabBtn || (shell && shell.querySelector('.admin-tabs .admin-tab')));
                 }
                 await loadAdminDashboard();
-                
+
             } catch (e) {
                 showToast('操作失败: ' + e.message, 'error');
             }
@@ -2299,10 +2299,10 @@
                 var res = await fetch(API_BASE + '/auth/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        username: username, 
-                        password: password, 
-                        email: email || null 
+                    body: JSON.stringify({
+                        username: username,
+                        password: password,
+                        email: email || null
                     })
                 });
 
@@ -2356,7 +2356,7 @@
                     console.error('保存对话失败:', e);
                 }
             }
-            
+
             authToken = null;
             currentUser = null;
             userProfile = null;
@@ -2372,10 +2372,10 @@
             loginSessionId = null;
             var adm = document.getElementById('adminApp');
             if (adm) adm.style.display = 'none';
-            
+
             // 停止监护人轮询
             stopGuardianPoll();
-            
+
             showAuthPage();
             showToast('已退出登录', 'info');
         }
@@ -2418,6 +2418,10 @@
                     var data = await res.json();
                     userProfile = data.profile;
                     updateUserAvatar();
+                    // 如果是监护人（有待监护人），启动紧急预警轮询
+                    if (userProfile && userProfile.protected_users && userProfile.protected_users.length > 0) {
+                        startGuardianPoll();
+                    }
                 }
             } catch (e) {
                 console.error('加载用户画像失败:', e);
@@ -2440,7 +2444,7 @@
                 if (key !== 'headers') rest[key] = options[key];
             }
             var headers = JSON.parse(JSON.stringify(optHeaders));
-            
+
             // 如果没有传入 Authorization，则从 localStorage 获取
             if (!headers['Authorization']) {
                 var token = (authToken || localStorage.getItem('smartguard_token') || '').trim();
@@ -2582,7 +2586,7 @@
         }
 
         // ==================== 知识百科模式 ====================
-        
+
         // 扩展诈骗类型数据（包含详细信息）
         const SCAM_TYPES_FULL = [
             { id: 'police_impersonation', name: '冒充公检法诈骗', icon: '👮', color: 'police', desc: '骗子冒充警察、检察官、法官，说你涉嫌犯罪要转账' },
@@ -2598,13 +2602,13 @@
             { id: 'medical_fraud', name: '医保诈骗', icon: '💊', color: 'medical', desc: '冒充医保局诈骗' },
             { id: 'deepfake_fraud', name: '深度伪造诈骗', icon: '🎭', color: 'deepfake', desc: 'AI换脸视频诈骗' }
         ];
-        
+
         // 诈骗类型详细信息（从API获取或使用内置数据）
         let scamDetailsCache = {};
-        
+
         async function renderLearnMode() {
             var main = document.getElementById('mainContent');
-            
+
             // 尝试从API获取百科数据
             try {
                 var res = await apiRequest(API_BASE + '/encyclopedia/');
@@ -2616,7 +2620,7 @@
             } catch (e) {
                 console.log('使用内置百科数据:', e);
             }
-            
+
             // 回退到内置数据
             renderEncyclopediaHome({
                 scam_types: SCAM_TYPES_FULL,
@@ -2628,12 +2632,12 @@
                 statistics: { total_scam_types: 12, high_risk_count: 3, medium_risk_count: 6, low_risk_count: 3 }
             });
         }
-        
+
         function renderEncyclopediaHome(data) {
             var main = document.getElementById('mainContent');
             var scamTypes = data.scam_types || SCAM_TYPES_FULL;
             var stats = data.statistics || {};
-            
+
             // 统计卡片
             var statsHtml = '<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">' +
                 '<div class="report-stat-card"><div class="report-stat-value" style="color: var(--primary);">' + (stats.total_scam_types || 12) + '</div><div class="report-stat-label">诈骗类型</div></div>' +
@@ -2641,13 +2645,13 @@
                 '<div class="report-stat-card"><div class="report-stat-value" style="color: var(--warning);">' + (stats.medium_risk_count || 6) + '</div><div class="report-stat-label">中等风险</div></div>' +
                 '<div class="report-stat-card"><div class="report-stat-value" style="color: var(--success);">' + (stats.low_risk_count || 3) + '</div><div class="report-stat-label">低风险</div></div>' +
                 '</div>';
-            
+
             // 提示文字
             var tipHtml = '<div class="welcome-card" style="margin-bottom: 20px;">' +
                 '<h3>🔍 如何使用知识百科？</h3>' +
                 '<p>点击任意诈骗类型卡片，了解该诈骗的 <strong>诈骗手法</strong>、<strong>真实案例</strong> 和 <strong>防范技巧</strong>。建议认真学习，提升防骗意识！</p>' +
                 '</div>';
-            
+
             // 诈骗类型网格
             var cardsHtml = scamTypes.map(function(scam) {
                 var riskClass = getRiskClassByLevel(scam.risk_level);
@@ -2665,7 +2669,7 @@
                 '<div class="knowledge-grid" style="padding: 0;">' + cardsHtml + '</div>' +
                 '</div>';
         }
-        
+
         function getRiskClassByLevel(level) {
             if (level >= 4) return 'level-4';
             if (level >= 3) return 'level-3';
@@ -2673,18 +2677,18 @@
             if (level >= 1) return 'level-1';
             return 'level-0';
         }
-        
+
         function getRiskLabel(level) {
             if (level >= 4) return '⚠️ 高风险';
             if (level >= 3) return '🔶 中等风险';
             if (level >= 2) return '🔷 低风险';
             return '✅ 安全';
         }
-        
+
         async function showEncyclopediaDetail(scamId) {
             var main = document.getElementById('mainContent');
             main.innerHTML = '<div style="display:flex; align-items:center; justify-content:center; padding:60px; color: var(--text-secondary);"><div class="btn-spinner"></div> 加载中...</div>';
-            
+
             // 尝试从API获取详情
             try {
                 var res = await apiRequest(API_BASE + '/encyclopedia/scam-types/' + scamId);
@@ -2696,25 +2700,25 @@
             } catch (e) {
                 console.log('使用内置详情数据:', e);
             }
-            
+
             // 回退到内置数据
             renderScamDetail(getBuiltinScamDetail(scamId));
         }
-        
+
         function renderScamDetail(detail) {
             if (!detail) {
                 renderScamDetail(getBuiltinScamDetail('police_impersonation'));
                 return;
             }
-            
+
             var main = document.getElementById('mainContent');
             var riskClass = getRiskClassByLevel(detail.risk_level);
-            
+
             // 诈骗手法
             var techniquesHtml = detail.techniques ? detail.techniques.map(function(t, i) {
                 return '<li style="margin-bottom: 12px; padding-left: 8px;"><span style="color: var(--danger); font-weight: 600;">' + (i + 1) + '.</span> ' + t + '</li>';
             }).join('') : '';
-            
+
             // 典型案例
             var casesHtml = '';
             if (detail.typical_cases && detail.typical_cases.length > 0) {
@@ -2725,12 +2729,12 @@
                         '</div>';
                 }).join('');
             }
-            
+
             // 防范技巧
             var tipsHtml = detail.prevention_tips ? detail.prevention_tips.map(function(t, i) {
                 return '<li style="margin-bottom: 12px; padding-left: 8px;"><span style="color: var(--success); font-weight: 600;">✓</span> ' + t + '</li>';
             }).join('') : '';
-            
+
             // 警示信号
             var warningsHtml = '';
             if (detail.warning_signs && detail.warning_signs.length > 0) {
@@ -2742,7 +2746,7 @@
                     }).join('') +
                     '</ul></div>';
             }
-            
+
             // 关键词
             var keywordsHtml = '';
             if (detail.keywords && detail.keywords.length > 0) {
@@ -2754,10 +2758,10 @@
                     }).join('') +
                     '</div></div>';
             }
-            
+
             main.innerHTML = '<div style="padding: 24px; overflow-y: auto; flex: 1;">' +
                 '<button onclick="renderLearnMode()" class="back-btn" style="margin-bottom: 20px;">← 返回知识百科</button>' +
-                
+
                 '<div style="background: var(--bg-secondary); border-radius: 16px; padding: 24px; margin-bottom: 20px;">' +
                 '<div style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">' +
                 '<div style="width: 64px; height: 64px; border-radius: 16px; background: var(--gradient-primary); display: flex; align-items: center; justify-content: center; font-size: 32px;">' + detail.icon + '</div>' +
@@ -2767,37 +2771,37 @@
                 '</div></div>' +
                 '<p style="color: var(--text-secondary); font-size: 15px; line-height: 1.7;">' + detail.short_desc + '</p>' +
                 '</div>' +
-                
+
                 // 诈骗手法
                 '<div style="background: var(--bg-secondary); border-radius: 16px; padding: 24px; margin-bottom: 20px; border-left: 4px solid var(--danger);">' +
                 '<h3 style="font-size: 18px; margin-bottom: 16px; color: var(--danger);">🎭 诈骗手法揭秘</h3>' +
                 '<ul style="list-style: none; padding: 0; line-height: 1.8;">' + techniquesHtml + '</ul>' +
                 '</div>' +
-                
+
                 // 警示信号
                 warningsHtml +
-                
+
                 // 典型案例
                 '<div style="background: var(--bg-secondary); border-radius: 16px; padding: 24px; margin-bottom: 20px;">' +
                 '<h3 style="font-size: 18px; margin-bottom: 16px; color: var(--warning);">📖 真实案例</h3>' +
                 casesHtml +
                 '</div>' +
-                
+
                 // 防范技巧
                 '<div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05)); border-radius: 16px; padding: 24px; margin-bottom: 20px; border: 1px solid rgba(16, 185, 129, 0.3);">' +
                 '<h3 style="font-size: 18px; margin-bottom: 16px; color: var(--success);">🛡️ 如何防范</h3>' +
                 '<ul style="list-style: none; padding: 0; line-height: 1.8;">' + tipsHtml + '</ul>' +
                 '</div>' +
-                
+
                 keywordsHtml +
-                
+
                 // 返回按钮
                 '<div style="text-align: center; margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border);">' +
                 '<button onclick="renderLearnMode()" class="profile-save-btn" style="padding: 14px 32px;">← 返回知识百科</button>' +
                 '</div>' +
                 '</div>';
         }
-        
+
         function getBuiltinScamDetail(scamId) {
             // 内置的诈骗详情数据
             var builtInData = {
@@ -3222,10 +3226,10 @@
                     keywords: ['AI换脸', '深度伪造', '视频通话', '冒充', '伪造', '转账']
                 }
             };
-            
+
             return builtInData[scamId] || builtInData['police_impersonation'];
         }
-        
+
         // 保持原有方法兼容
         function showKnowledgeDetail(id) {
             showEncyclopediaDetail(id);
@@ -3274,7 +3278,7 @@
                 await checkEmailUnreadCount();
             }
         }
-        
+
         async function checkEmailUnreadCount() {
             try {
                 var res = await apiRequest(API_BASE + '/email-monitor/alerts/unread-count');
@@ -3292,11 +3296,11 @@
                 }
             } catch (e) { console.error(e); }
         }
-        
+
         async function loadEmailAlerts() {
             var content = document.getElementById('protectedContent');
             content.innerHTML = '<div style="display:flex; align-items:center; justify-content:center; padding:60px; color: var(--text-secondary);">加载中...</div>';
-            
+
             try {
                 var res = await apiRequest(API_BASE + '/email-monitor/alerts?limit=50');
                 if (!res || !res.ok) {
@@ -3310,41 +3314,41 @@
                 content.innerHTML = '<div class="protected-empty"><div class="protected-empty-icon">⚠️</div><p>加载失败</p></div>';
             }
         }
-        
+
         function renderEmailAlertsList(data) {
             var content = document.getElementById('protectedContent');
             var alerts = data.alerts || [];
             var llmEnabled = data.llm_analysis_enabled;
-            
-            var llmBadge = llmEnabled 
+
+            var llmBadge = llmEnabled
                 ? '<span class="admin-badge verified" style="margin-left: 8px;">🤖 AI分析已启用</span>'
                 : '<span class="admin-badge pending" style="margin-left: 8px;">规则分析</span>';
-            
+
             var summaryHtml = '<div style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px;">' +
                 '<div class="report-stat-card"><div class="report-stat-value" style="color: var(--text-primary);">' + data.total + '</div><div class="report-stat-label">总预警</div></div>' +
                 '<div class="report-stat-card"><div class="report-stat-value" style="color: var(--danger);">' + data.unread_count + '</div><div class="report-stat-label">未读</div></div>' +
                 '<div class="report-stat-card"><div class="report-stat-value" style="color: var(--success);">' + (data.total - data.unread_count) + '</div><div class="report-stat-label">已读</div></div>' +
                 '<div class="report-stat-card" style="display: flex; flex-direction: column; justify-content: center; align-items: center;">' + llmBadge + '<div class="report-stat-label" style="margin-top: 4px;">智能分析</div></div>' +
                 '</div>';
-            
+
             if (alerts.length === 0) {
                 content.innerHTML = summaryHtml + '<div class="protected-empty"><div class="protected-empty-icon">✅</div><h3 style="margin-bottom:8px;">暂无邮件预警</h3><p style="font-size:13px;">您的邮箱目前安全无风险，或尚未配置邮件监控</p></div>';
                 return;
             }
-            
+
             var alertsHtml = alerts.map(function(alert) {
                 return renderEmailAlertItem(alert);
             }).join('');
-            
+
             content.innerHTML = summaryHtml + '<div class="protected-alert-list">' + alertsHtml + '</div>';
         }
-        
+
         function renderEmailAlertItem(alert) {
             var level = parseInt(alert.risk_level) || 0;
             var levelClass = level >= 4 ? 'high' : (level >= 2 ? 'medium' : 'low');
             var levelNames = ['安全', '低风险', '中等', '高风险', '极高风险', '确认诈骗'];
             var levelName = levelNames[level] || '未知';
-            
+
             var riskTypeNames = {
                 "normal": "正常邮件",
                 "police_impersonation": "冒充公检法",
@@ -3353,13 +3357,13 @@
                 "scam_other": "其他诈骗"
             };
             var riskTypeName = riskTypeNames[alert.risk_type] || alert.risk_type || '未知';
-            
+
             var scorePercent = Math.round((alert.scam_score || 0) * 100);
-            
-            var readStatus = alert.is_read 
+
+            var readStatus = alert.is_read
                 ? '<span style="color: var(--success); font-size: 12px;">✓ 已读</span>'
                 : '<button class="protected-alert-btn confirm" onclick="markEmailAlertRead(\'' + alert.id + '\')">标记已读</button>';
-            
+
             var keywordsHtml = '';
             if (alert.keywords && alert.keywords.length > 0) {
                 var keywordTags = alert.keywords.map(function(k) {
@@ -3368,7 +3372,7 @@
                 }).join('');
                 keywordsHtml = '<div style="margin-top: 8px; flex-wrap: wrap; display: flex; gap: 4px;">' + keywordTags + '</div>';
             }
-            
+
             return '<div class="protected-alert-item level-' + level + '">' +
                 '<div class="protected-alert-header">' +
                 '<span class="protected-alert-type">' + riskTypeName + '</span>' +
@@ -3386,7 +3390,7 @@
                 '<div class="protected-alert-actions">' + readStatus + '</div>' +
                 '</div>';
         }
-        
+
         async function markEmailAlertRead(alertId) {
             try {
                 var res = await apiRequest(API_BASE + '/email-monitor/alerts/' + alertId + '/read', {
@@ -3791,7 +3795,7 @@
         async function renderSubmitReportMode() {
             var main = document.getElementById('mainContent');
             submitSuccess = false;
-            
+
             main.innerHTML = '<div class="submit-report-container">' +
                 '<div class="report-hero">' +
                 '<div class="report-hero-icon">📤</div>' +
@@ -3805,7 +3809,7 @@
                 '</div>' +
                 '<div id="reportTabContent"></div>' +
                 '</div>';
-            
+
             await loadReportTab('submit');
         }
 
@@ -3826,7 +3830,7 @@
         }
 
         async function loadSubmitForm(container) {
-            container.innerHTML = 
+            container.innerHTML =
                 '<div class="report-form">' +
                 '<div class="report-info-card">' +
                 '<h4>⚠️ 举报须知</h4>' +
@@ -3928,7 +3932,7 @@
                 var container = document.getElementById('reportTabContent');
                 var keywordsHtml = '';
                 if (data.extracted_info && data.extracted_info.keywords && data.extracted_info.keywords.length > 0) {
-                    keywordsHtml = '<div class="report-extracted"><h4>🔍 自动提取的关键词</h4><div class="report-extracted-tags">' + 
+                    keywordsHtml = '<div class="report-extracted"><h4>🔍 自动提取的关键词</h4><div class="report-extracted-tags">' +
                         data.extracted_info.keywords.map(function(k) { return '<span class="report-extracted-tag">' + k + '</span>'; }).join('') + '</div></div>';
                 }
                 container.innerHTML = '<div class="report-form"><div class="report-success">' +
@@ -3983,7 +3987,7 @@
                 }).join('');
                 var keywordsHtml = '';
                 if (data.recent_keywords && data.recent_keywords.length > 0) {
-                    keywordsHtml = '<div class="report-extracted" style="margin-top:20px;"><h4>🔥 高频关键词</h4><div class="report-extracted-tags">' + 
+                    keywordsHtml = '<div class="report-extracted" style="margin-top:20px;"><h4>🔥 高频关键词</h4><div class="report-extracted-tags">' +
                         data.recent_keywords.map(function(k) { return '<span class="report-extracted-tag">' + k[0] + ' (' + k[1] + ')</span>'; }).join('') + '</div></div>';
                 }
                 container.innerHTML = '<div class="report-stat-grid">' +
@@ -4375,7 +4379,7 @@
 
                 var messagesHtml = msgs.map(function(m) { return renderMessage(m); }).join('');
                 body.innerHTML = '<div class="chat-messages" style="max-height:500px; overflow-y:auto;">' + messagesHtml + '</div>';
-                
+
                 setTimeout(function() {
                     var container = document.querySelector('#historyModalBody .chat-messages');
                     if (container) container.scrollTop = container.scrollHeight;
@@ -4648,10 +4652,10 @@
                 if (!res || !res.ok) throw new Error();
                 var data = await res.json();
                 var loadedMessages = (data.messages || []).map(function(m) { return {role: m.role, content: m.content}; });
-                
+
                 var mode = loadedMessages.length > 0 ? (loadedMessages[0]._mode || 'risk') : 'risk';
                 messages[mode] = loadedMessages;
-                
+
                 currentMode = mode;
                 isFirstLoad = false;
                 switchMode(mode);
@@ -4749,7 +4753,7 @@
             // 统计卡片颜色
             var scoreColor = s.protection_score >= 80 ? '#22c55e' : s.protection_score >= 50 ? '#f59e0b' : '#ef4444';
             var awarenessColor = s.risk_awareness >= 70 ? '#22c55e' : s.risk_awareness >= 40 ? '#f59e0b' : '#ef4444';
-            
+
             var summaryHtml = '<div class="report-summary">' +
                 '<div class="report-stat-card"><div class="report-stat-value" style="color:' + scoreColor + '">' + (s.protection_score || 0) + '</div><div class="report-stat-label">防护评分</div></div>' +
                 '<div class="report-stat-card"><div class="report-stat-value" style="color:#a78bfa">' + (s.total_consultations || 0) + '</div><div class="report-stat-label">咨询次数</div></div>' +
@@ -4772,7 +4776,7 @@
                     '</div>' +
                 '</div>';
             }
-            
+
             // 风险分布统计
             var riskDistHtml = '';
             var dist = rd.distribution || {};
@@ -4785,7 +4789,7 @@
                         '<span style="font-size:13px; color:var(--text-secondary); width:50px; text-align:right;">' + dist[level].percentage + '%</span></div>';
                 }
             }
-            
+
             if (!riskDistHtml) {
                 riskDistHtml = '<div style="text-align:center; padding:20px; color:var(--text-secondary); font-size:14px;">暂无预警数据，继续保持警惕！</div>';
             }
@@ -4825,7 +4829,7 @@
                     '<div style="font-size:13px; color:var(--text-secondary); line-height:1.6;">' + r.content + '</div></div>';
             }).join('');
 
-            container.innerHTML = '<div class="report-tabs">' + tabsHtml + 
+            container.innerHTML = '<div class="report-tabs">' + tabsHtml +
                 '<button class="report-tab" onclick="renderReportMode()" style="margin-left:auto;">🔄 刷新</button></div>' +
                 summaryHtml + contentHtml +
                 '<div style="margin-top:24px;"><h3 style="font-size:16px; margin-bottom:16px; color:var(--text-primary); font-weight:600;">🛡️ 防护建议</h3>' + recsHtml + '</div>';
@@ -4838,19 +4842,19 @@
                         var c1 = echarts.init(chartTrendEl);
                         c1.setOption(charts.time_trend_line);
                     }
-                    
+
                     var chartPieEl = document.getElementById('chart_pie');
                     if (charts.risk_level_pie && chartPieEl) {
                         var c2 = echarts.init(chartPieEl);
                         c2.setOption(charts.risk_level_pie);
                     }
-                    
+
                     var chartBarEl = document.getElementById('chart_bar');
                     if (charts.scam_type_bar && chartBarEl) {
                         var c3 = echarts.init(chartBarEl);
                         c3.setOption(charts.scam_type_bar);
                     }
-                    
+
                     window.addEventListener('resize', function() {
                         if (c1) c1.resize();
                         if (c2) c2.resize();
@@ -4871,7 +4875,7 @@
 
             var main = document.getElementById('mainContent');
             var avatarLetter = currentUser && currentUser.username ? currentUser.username.charAt(0).toUpperCase() : '👤';
-            
+
             main.innerHTML = '<div class="page-header"><h1 class="page-title">👤 个人中心</h1><p class="page-subtitle">完善你的信息，获得更个性化的反诈建议</p></div>' +
                 '<div class="profile-container"><div class="profile-grid">' +
                 '<div class="profile-sidebar"><div class="profile-avatar-large" id="profileAvatar">' + avatarLetter + '</div>' +
@@ -4954,7 +4958,7 @@
         function renderSettingsMode() {
             var main = document.getElementById('mainContent');
             var createdDate = currentUser && currentUser.created_at ? new Date(currentUser.created_at * 1000).toLocaleDateString() : '-';
-            
+
             main.innerHTML = '<div class="page-header"><h1 class="page-title">⚙️ 设置</h1><p class="page-subtitle">个性化你的防护体验</p></div>' +
                 '<div class="settings-content">' +
                 // 邮件监控设置
@@ -4975,16 +4979,16 @@
                 // 关于
                 '<div class="settings-section"><h3>📱 关于</h3>' +
                 '<div class="setting-item"><div><strong>SmartGuard</strong><p style="font-size: 13px; color: var(--text-secondary);">版本 1.0.0</p></div></div></div></div>';
-            
+
             // 加载邮件监控配置
             loadEmailMonitorConfigs();
         }
-        
+
         // ==================== 邮件监控功能 ====================
         async function loadEmailMonitorConfigs() {
             var container = document.getElementById('emailMonitorConfig');
             if (!container) return;
-            
+
             try {
                 var res = await apiRequest(API_BASE + '/email-monitor/configs');
                 if (res.ok) {
@@ -4997,26 +5001,26 @@
                 container.innerHTML = '<p style="color: var(--text-secondary); font-size: 13px;">暂无监控配置</p>';
             }
         }
-        
+
         function renderEmailConfigs(configs) {
             var container = document.getElementById('emailMonitorConfig');
             if (!container) return;
-            
+
             if (!configs || configs.length === 0) {
                 container.innerHTML = '<p style="color: var(--text-secondary); font-size: 13px;">暂无监控配置</p>';
                 return;
             }
-            
+
             var html = '';
             configs.forEach(function(config) {
                 var statusClass = config.is_active ? 'verified' : 'pending';
                 var statusText = config.is_active ? '监控中' : '已暂停';
                 var lastCheck = config.last_check_at ? new Date(config.last_check_at * 1000).toLocaleString() : '从未检查';
-                
+
                 html += '<div class="guardian-card" style="margin-bottom: 12px;">' +
                     '<div class="guardian-avatar">📧</div>' +
                     '<div class="guardian-info" style="flex: 1;">' +
-                    '<div class="guardian-name">' + escapeHtml(config.email_address) + 
+                    '<div class="guardian-name">' + escapeHtml(config.email_address) +
                     ' <span class="admin-badge ' + statusClass + '">' + statusText + '</span></div>' +
                     '<div class="guardian-meta">' +
                     '<span>IMAP: ' + config.imap_host + '</span>' +
@@ -5026,10 +5030,10 @@
                     '<button class="guardian-btn edit" onclick="testEmailConnection(\'' + escapeHtml(config.email_address) + '\')">测试</button>' +
                     '<button class="guardian-btn edit" onclick="removeEmailConfig(\'' + config.id + '\')" style="background: var(--danger);">删除</button></div></div>';
             });
-            
+
             container.innerHTML = html;
         }
-        
+
         function showAddEmailModal() {
             var modal = document.createElement('div');
             modal.id = 'emailModal';
@@ -5051,28 +5055,28 @@
                 '<div style="display: flex; gap: 12px;">' +
                 '<button class="guardian-btn edit" onclick="testEmailConnection()" style="flex: 1;">测试连接</button>' +
                 '<button class="guardian-btn edit" onclick="addEmailConfig()" style="flex: 1; background: var(--primary); color: white;">确认添加</button></div></div></div>';
-            
+
             document.body.appendChild(modal);
             modal.style.display = 'flex';
         }
-        
+
         function closeEmailModal() {
             var modal = document.getElementById('emailModal');
             if (modal) modal.remove();
         }
-        
+
         async function testEmailConnection(email) {
             var emailAddress = email || document.getElementById('emailAddress').value;
             var username = document.getElementById('emailUsername').value || emailAddress;
             var password = document.getElementById('emailPassword').value;
-            
+
             if (!emailAddress || !password) {
                 showToast('请填写邮箱和密码', 'error');
                 return;
             }
-            
+
             showToast('正在测试连接...', 'info');
-            
+
             try {
                 var res = await apiRequest(API_BASE + '/email-monitor/test-connection?email_address=' + encodeURIComponent(emailAddress) + '&password=' + encodeURIComponent(password) + '&username=' + encodeURIComponent(username));
                 var data = await res.json();
@@ -5085,19 +5089,19 @@
                 showToast('连接失败: ' + e.message, 'error');
             }
         }
-        
+
         async function addEmailConfig() {
             var emailAddress = document.getElementById('emailAddress').value;
             var username = document.getElementById('emailUsername').value || emailAddress;
             var password = document.getElementById('emailPassword').value;
-            
+
             if (!emailAddress || !password) {
                 showToast('请填写邮箱和密码', 'error');
                 return;
             }
-            
+
             showToast('正在添加...', 'info');
-            
+
             try {
                 var res = await fetch(API_BASE + '/email-monitor/config', {
                     method: 'POST',
@@ -5108,7 +5112,7 @@
                         password: password
                     })
                 });
-                
+
                 if (res.ok) {
                     var data = await res.json();
                     showToast('添加成功！每5分钟自动检测邮件', 'success');
@@ -5122,16 +5126,16 @@
                 showToast('添加失败: ' + e.message, 'error');
             }
         }
-        
+
         async function removeEmailConfig(configId) {
             if (!confirm('确定要删除这个邮箱监控吗？')) return;
-            
+
             try {
                 var res = await fetch(API_BASE + '/email-monitor/config/' + configId, {
                     method: 'DELETE',
                     headers: { 'Authorization': 'Bearer ' + token }
                 });
-                
+
                 if (res.ok) {
                     showToast('已删除', 'success');
                     loadEmailMonitorConfigs();
@@ -5429,7 +5433,7 @@
                 var savedMessages = localStorage.getItem('smartguard_messages');
                 var savedMode = localStorage.getItem('smartguard_currentMode');
                 var savedFirstLoad = localStorage.getItem('smartguard_firstLoad');
-                
+
                 if (savedMessages) {
                     messages = JSON.parse(savedMessages);
                     // 确保三种模式都存在
@@ -5454,11 +5458,11 @@
         // ==================== 保存当前对话到服务器 ====================
         async function saveCurrentSession() {
             if (!authToken || !currentUser) return;
-            
+
             try {
                 var allMessages = [];
                 var modeNames = { risk: 'risk', chat: 'chat', learn: 'learn' };
-                
+
                 for (var mode in modeNames) {
                     var modeMsgs = messages[mode] || [];
                     for (var i = 0; i < modeMsgs.length; i++) {
@@ -5472,19 +5476,19 @@
                         }
                     }
                 }
-                
+
                 if (allMessages.length === 0) return;
-                
+
                 var formData = new FormData();
                 formData.append('user_id', currentUser.id);
                 formData.append('mode', currentMode || 'risk');
                 formData.append('history', JSON.stringify(allMessages.slice(-20)));
-                
+
                 await apiRequest(API_BASE + '/chat', {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 console.log('对话已保存到服务器');
             } catch (e) {
                 console.error('保存对话失败:', e);
@@ -5548,7 +5552,7 @@
             showLoading(true);
 
             await checkApiStatus();
-            
+
             // 加载本地保存的消息
             loadMessagesFromStorage();
 
@@ -5617,7 +5621,7 @@
                 <div id="help-intro" class="help-section">
                     <h4 class="help-section-title">🎉 欢迎使用 SmartGuard</h4>
                     <p class="help-desc">SmartGuard 是一款智能反诈助手，基于人工智能技术，帮助您识别和防范各类电信网络诈骗。无论您是年轻人还是老年人，都能轻松使用本系统保护自己和家人。</p>
-                    
+
                     <div class="help-stats">
                         <div class="help-stat-item">
                             <span class="stat-num">50+</span>
@@ -5680,7 +5684,7 @@
                 <!-- 功能模式 -->
                 <div id="help-modes" class="help-section" style="display: none;">
                     <h4 class="help-section-title">🎯 三种工作模式详解</h4>
-                    
+
                     <div class="help-mode-card">
                         <div class="help-mode-header">
                             <span class="help-mode-icon">🔍</span>
@@ -5770,7 +5774,7 @@
                 <div id="help-guardian" class="help-section" style="display: none;">
                     <h4 class="help-section-title">👥 家人守护功能</h4>
                     <p class="help-desc">当检测到您可能正在遭遇诈骗时，系统会自动通知您的监护人。多一层保护，多一份安心。</p>
-                    
+
                     <div class="help-diagram">
                         <div class="help-diagram-step">
                             <span class="d-icon">👤</span>
@@ -5855,7 +5859,7 @@
                 <div id="help-risk" class="help-section" style="display: none;">
                     <h4 class="help-section-title">🛡️ 风险等级说明</h4>
                     <p class="help-desc">系统会根据分析结果给出0-5级的风险等级评估，帮助您快速判断当前情况的风险程度。</p>
-                    
+
                     <div class="help-risk-list">
                         <div class="help-risk-item safe">
                             <span class="risk-badge">0级</span>
@@ -6100,7 +6104,7 @@
                 <!-- 使用技巧 -->
                 <div id="help-tips" class="help-section" style="display: none;">
                     <h4 class="help-section-title">💡 实用技巧汇总</h4>
-                    
+
                     <h5 class="help-sub-title">🚀 提升使用效率</h5>
                     <div class="help-tips-grid">
                         <div class="help-tip-card">
@@ -6285,7 +6289,7 @@
         .help-modal { max-width: 800px; max-height: 85vh; }
         .help-body { padding: 0; display: flex; }
         .help-nav {
-            width: 180px; background: var(--bg-primary); 
+            width: 180px; background: var(--bg-primary);
             padding: 16px; border-right: 1px solid var(--border);
             display: flex; flex-direction: column; gap: 4px;
         }
@@ -6301,7 +6305,7 @@
         .help-desc { color: var(--text-secondary); line-height: 1.7; margin-bottom: 20px; }
         .help-features { display: flex; flex-direction: column; gap: 16px; }
         .help-feature-item {
-            display: flex; gap: 16px; padding: 16px; 
+            display: flex; gap: 16px; padding: 16px;
             background: var(--bg-tertiary); border-radius: 12px;
         }
         .help-feature-icon { font-size: 32px; }
