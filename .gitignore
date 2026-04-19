@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+agent_new/
+agent/.venv/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Large model files
+*.pt
+*.pth
+*.h5
+
+# Lock files (optional, some prefer to commit these)
+# package-lock.json
