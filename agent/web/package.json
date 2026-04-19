@@ -1,0 +1,35 @@
+{
+  "name": "anti-fraud-assistant",
+  "version": "1.0.0",
+  "description": "基于多模态的反诈智能助手",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "cap:init": "npx cap init SmartGuard com.smartguard.app --web-dir=dist",
+    "cap:add": "npx cap add android && npx cap add ios",
+    "cap:sync": "npx cap sync",
+    "cap:open": "npx cap open android",
+    "build:cap": "npm run build && npm run cap:sync"
+  },
+  "dependencies": {
+    "antd": "^5.12.5",
+    "axios": "^1.6.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "zustand": "^4.4.7"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^8.3.0",
+    "@capacitor/cli": "^8.3.0",
+    "@capacitor/core": "^8.3.0",
+    "@capacitor/ios": "^8.3.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^5.0.8"
+  },
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}

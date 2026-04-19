@@ -1,0 +1,1972 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SmartGuard 智能反诈助手</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        :root {
+            --primary: #6366f1; --primary-dark: #4f46e5; --primary-light: #818cf8;
+            --bg-primary: #0f172a; --bg-secondary: #1e293b; --bg-tertiary: #334155;
+            --text-primary: #f1f5f9; --text-secondary: #94a3b8; --text-muted: #64748b;
+            --border: #334155; --border-light: #475569;
+            --success: #10b981; --success-light: #34d399;
+            --warning: #f59e0b; --danger: #ef4444; --danger-light: #f87171;
+            --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            --gradient-danger: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px;
+            --safe-h: env(safe-area-inset-bottom);
+        }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-primary); color: var(--text-primary); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+        body.no-auth { background: var(--bg-primary); }
+
+        /* ====== 顶部栏 ====== */
+        .m-header { height: 56px; background: var(--bg-secondary); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: center; padding: 0 16px; position: relative; flex-shrink: 0; }
+        .m-header-title { font-size: 17px; font-weight: 600; }
+        .m-header-back { position: absolute; left: 8px; width: 36px; height: 36px; border-radius: 50%; background: var(--bg-tertiary); border: none; color: var(--text-primary); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .m-header-action { position: absolute; right: 8px; }
+
+        /* ====== 底部导航 ====== */
+        .m-nav { height: calc(60px + var(--safe-h, 0px)); padding-bottom: var(--safe-h, 0px); background: var(--bg-secondary); border-top: 1px solid var(--border); display: flex; flex-shrink: 0; position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; }
+        .m-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; color: var(--text-muted); font-size: 10px; transition: color 0.2s; border: none; background: none; padding: 8px 0; }
+        .m-nav-item .m-nav-icon { font-size: 22px; line-height: 1; }
+        .m-nav-item.active { color: var(--primary-light); }
+
+        /* ====== 主内容区 ====== */
+        .m-content { flex: 1; overflow-y: auto; overflow-x: hidden; padding-bottom: calc(70px + var(--safe-h, 0px)); -webkit-overflow-scrolling: touch; }
+
+        /* ====== 聊天输入栏（固定底部） ====== */
+        .m-input-bar { position: fixed; left: 0; right: 0; bottom: calc(60px + var(--safe-h, 0px)); padding: 8px 12px; background: var(--bg-secondary); border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: flex-end; z-index: 99; }
+
+        /* ====== 登录页 ====== */
+        .auth-page { display: flex; flex-direction: column; min-height: 100vh; background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); }
+        .auth-logo { padding: 60px 0 40px; text-align: center; }
+        .auth-logo-icon { width: 72px; height: 72px; background: var(--gradient-primary); border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 36px; margin: 0 auto 16px; box-shadow: 0 8px 24px rgba(99,102,241,0.4); }
+        .auth-logo h1 { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
+        .auth-logo p { font-size: 13px; color: var(--text-secondary); }
+        .auth-tabs { display: flex; margin: 0 20px 24px; background: var(--bg-tertiary); border-radius: 12px; padding: 4px; }
+        .auth-tab { flex: 1; padding: 10px; text-align: center; font-size: 14px; font-weight: 500; border-radius: 10px; cursor: pointer; color: var(--text-secondary); transition: all 0.2s; border: none; background: none; }
+        .auth-tab.active { background: var(--primary); color: white; }
+        .auth-form-wrap { padding: 0 20px; flex: 1; }
+        .auth-form { display: none; }
+        .auth-form.active { display: block; }
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500; }
+        .form-input { width: 100%; padding: 14px 16px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-md); color: var(--text-primary); font-size: 15px; transition: all 0.2s; }
+        .form-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+        .form-input::placeholder { color: var(--text-muted); }
+        .form-hint { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+        .form-error { color: var(--danger); font-size: 13px; margin-top: 6px; display: none; }
+        .form-success { color: var(--success); font-size: 13px; margin-top: 6px; display: none; }
+        .form-btn { width: 100%; padding: 15px; background: var(--gradient-primary); border: none; border-radius: var(--radius-md); color: white; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 8px; transition: all 0.2s; }
+        .form-btn:active { transform: scale(0.98); opacity: 0.9; }
+        .form-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .auth-switch { text-align: center; margin-top: 20px; font-size: 13px; color: var(--text-secondary); }
+        .auth-switch a { color: var(--primary-light); cursor: pointer; text-decoration: none; }
+
+        /* ====== 首页：模式切换 ====== */
+        .m-mode-bar { padding: 12px 16px; background: var(--bg-secondary); border-bottom: 1px solid var(--border); display: flex; gap: 8px; overflow-x: auto; flex-shrink: 0; }
+        .m-mode-btn { flex-shrink: 0; padding: 8px 16px; border-radius: 20px; border: 1.5px solid var(--border); background: transparent; color: var(--text-secondary); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+        .m-mode-btn.active { background: var(--gradient-primary); color: white; border-color: transparent; }
+        .m-mode-btn .icon { font-size: 16px; }
+
+        /* ====== 聊天区域 ====== */
+        .m-chat-wrap { display: flex; flex-direction: column; min-height: calc(100vh - 56px - 70px); }
+        .m-chat-messages { flex: 1; overflow-y: auto; padding: 12px 16px; padding-bottom: calc(70px + var(--safe-h, 0px)); -webkit-overflow-scrolling: touch; }
+        .m-welcome { background: var(--bg-secondary); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 12px; }
+        .m-welcome h3 { font-size: 15px; margin-bottom: 8px; }
+        .m-welcome p { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+        .m-msg { margin-bottom: 12px; display: flex; flex-direction: column; }
+        .m-msg.user { align-items: flex-end; }
+        .m-msg.assistant { align-items: flex-start; }
+        .m-msg.system { align-items: center; }
+        .m-msg.system .m-msg-bubble { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: var(--danger-light); border-radius: 12px; max-width: 90%; text-align: center; font-size: 13px; }
+        .m-msg-bubble { max-width: 78%; padding: 12px 16px; border-radius: 16px; font-size: 15px; line-height: 1.6; word-break: break-all; }
+        .m-msg.user .m-msg-bubble { background: var(--primary); color: white; border-bottom-right-radius: 4px; }
+        .m-msg.assistant .m-msg-bubble { background: var(--bg-secondary); border-bottom-left-radius: 4px; }
+        .m-msg-time { font-size: 11px; color: var(--text-muted); margin-top: 4px; padding: 0 4px; }
+        .m-risk-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; margin-bottom: 8px; }
+        .m-risk-badge.level-0 { background: rgba(16,185,129,0.15); color: var(--success-light); }
+        .m-risk-badge.level-1 { background: rgba(96,165,250,0.15); color: #60a5fa; }
+        .m-risk-badge.level-2 { background: rgba(251,191,36,0.15); color: #fbbf24; }
+        .m-risk-badge.level-3 { background: rgba(248,113,113,0.15); color: #f87171; }
+        .m-risk-badge.level-4 { background: var(--gradient-danger); color: #fff; }
+        .m-input-bar { padding: 8px 12px; background: var(--bg-secondary); border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0; }
+        .m-input-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--bg-tertiary); color: var(--text-secondary); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .m-rec-btn { background: var(--bg-tertiary); transition: background 0.2s; }
+        .m-rec-btn.recording { background: #ef4444; color: white; animation: rec-pulse 1s infinite; }
+        @keyframes rec-pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+        .m-input { flex: 1; padding: 10px 14px; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 22px; color: var(--text-primary); font-size: 15px; min-height: 40px; max-height: 120px; resize: none; }
+        .m-input:focus { outline: none; border-color: var(--primary); }
+        .m-input::placeholder { color: var(--text-muted); }
+        .m-send-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--gradient-primary); color: white; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .m-send-btn:active { transform: scale(0.95); }
+        .m-attachment-preview { display: flex; gap: 6px; flex-wrap: wrap; padding: 4px 12px 0; }
+        .m-attachment-item { display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 12px; font-size: 11px; background: var(--bg-tertiary); border: 1px solid var(--border); color: var(--text-secondary); animation: mAttachSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        @keyframes mAttachSlideIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+        .m-attachment-item .m-remove-btn { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 12px; padding: 0; line-height: 1; }
+
+        /* ====== 页面通用 ====== */
+        .m-page { display: none; }
+        .m-page.active { display: block; }
+        .m-page-header { padding: 20px 16px 12px; }
+        .m-page-title { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+        .m-page-sub { font-size: 13px; color: var(--text-secondary); }
+
+        /* ====== 卡片 ====== */
+        .m-card { background: var(--bg-secondary); border-radius: var(--radius-lg); padding: 16px; margin: 0 16px 12px; }
+        .m-card-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+
+        /* ====== 统计网格 ====== */
+        .m-stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 0 16px; margin-bottom: 12px; }
+        .m-stat-item { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 14px; text-align: center; }
+        .m-stat-value { font-size: 24px; font-weight: 700; color: var(--primary-light); }
+        .m-stat-label { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+        /* ====== Tab 切换 ====== */
+        .m-tab-bar { display: flex; background: var(--bg-secondary); border-radius: 12px; padding: 4px; margin: 0 16px 12px; gap: 2px; }
+        .m-tab { flex: 1; padding: 8px; text-align: center; font-size: 13px; font-weight: 500; color: var(--text-secondary); border-radius: 10px; cursor: pointer; transition: all 0.2s; border: none; background: none; white-space: nowrap; }
+        .m-tab.active { background: var(--primary); color: white; }
+
+        /* ====== 预警列表 ====== */
+        .m-alert-item { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 14px; margin: 0 16px 10px; border-left: 4px solid; }
+        .m-alert-item.level-2 { border-color: var(--warning); }
+        .m-alert-item.level-3 { border-color: var(--danger); }
+        .m-alert-item.level-4 { border-color: #dc2626; }
+        .m-alert-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+        .m-alert-type { font-size: 14px; font-weight: 600; }
+        .m-alert-level { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 500; }
+        .m-alert-level.high { background: rgba(239,68,68,0.15); color: var(--danger); }
+        .m-alert-level.medium { background: rgba(245,158,11,0.15); color: var(--warning); }
+        .m-alert-level.low { background: rgba(34,197,94,0.15); color: var(--success); }
+        .m-alert-content { font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 8px; }
+        .m-alert-time { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
+        .m-alert-actions { display: flex; gap: 8px; }
+        .m-btn-sm { padding: 6px 14px; border-radius: 6px; border: none; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+        .m-btn-primary { background: var(--primary); color: white; }
+        .m-btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); }
+        .m-btn-danger { background: rgba(239,68,68,0.15); color: var(--danger); }
+
+        /* ====== 百科 ====== */
+        .m-scam-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 0 16px; }
+        .m-scam-card { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 14px; cursor: pointer; transition: all 0.2s; border: 2px solid transparent; }
+        .m-scam-card:active { transform: scale(0.97); border-color: var(--primary); }
+        .m-scam-icon { font-size: 28px; margin-bottom: 8px; }
+        .m-scam-name { font-size: 13px; font-weight: 600; margin-bottom: 6px; line-height: 1.3; }
+        .m-scam-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+        /* ====== 百科详情 ====== */
+        .m-detail-section { background: var(--bg-secondary); border-radius: var(--radius-lg); margin: 0 16px 12px; overflow: hidden; }
+        .m-detail-header { padding: 20px 16px; display: flex; align-items: center; gap: 12px; }
+        .m-detail-icon { font-size: 40px; }
+        .m-detail-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+        .m-detail-body { padding: 0 16px 16px; }
+        .m-detail-subtitle { font-size: 13px; font-weight: 600; color: var(--primary-light); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+        .m-detail-list { list-style: none; }
+        .m-detail-list li { font-size: 13px; color: var(--text-secondary); padding: 8px 0; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 8px; line-height: 1.5; }
+        .m-detail-list li:last-child { border-bottom: none; }
+        .m-detail-list li::before { content: '•'; color: var(--primary-light); font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+
+        /* ====== 举报 ====== */
+        .m-type-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 0 16px; margin-bottom: 12px; }
+        .m-type-item { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 14px; text-align: center; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }
+        .m-type-item.selected { border-color: var(--primary); background: rgba(99,102,241,0.1); }
+        .m-type-item .icon { font-size: 26px; margin-bottom: 6px; display: block; }
+        .m-type-item .name { font-size: 12px; font-weight: 500; }
+        .m-textarea { width: 100%; padding: 14px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-md); color: var(--text-primary); font-size: 14px; resize: vertical; min-height: 100px; font-family: inherit; }
+        .m-textarea:focus { outline: none; border-color: var(--primary); }
+        .m-submit-wrap { padding: 16px; }
+
+        /* ====== 个人中心 ====== */
+        .m-profile-card { text-align: center; padding: 24px 16px; }
+        .m-avatar { width: 72px; height: 72px; border-radius: 50%; background: var(--gradient-primary); display: flex; align-items: center; justify-content: center; font-size: 30px; margin: 0 auto 12px; }
+        .m-username { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+        .m-useremail { font-size: 13px; color: var(--text-secondary); }
+        .m-profile-stats { display: flex; justify-content: center; gap: 24px; margin-top: 16px; }
+        .m-profile-stat { text-align: center; }
+        .m-profile-stat-val { font-size: 20px; font-weight: 700; color: var(--primary-light); }
+        .m-profile-stat-label { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+        /* ====== 设置列表 ====== */
+        .m-settings-list { margin: 0 16px; }
+        .m-settings-group { background: var(--bg-secondary); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 12px; }
+        .m-settings-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.2s; }
+        .m-settings-item:last-child { border-bottom: none; }
+        .m-settings-item:active { background: var(--bg-tertiary); }
+        .m-settings-left { display: flex; align-items: center; gap: 12px; }
+        .m-settings-icon { font-size: 20px; }
+        .m-settings-label { font-size: 14px; }
+        .m-settings-arrow { font-size: 14px; color: var(--text-muted); }
+
+        /* ====== 监护人列表 ====== */
+        .m-guardian-item { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 14px; margin: 0 16px 10px; display: flex; align-items: center; gap: 12px; }
+        .m-guardian-avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--gradient-primary); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+        .m-guardian-info { flex: 1; min-width: 0; }
+        .m-guardian-name { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+        .m-guardian-meta { font-size: 12px; color: var(--text-secondary); }
+        .m-guardian-actions { display: flex; gap: 6px; }
+
+        /* ====== Toast ====== */
+        .m-toast { position: fixed; top: 70px; left: 50%; transform: translateX(-50%) translateY(-20px); background: rgba(30,41,59,0.95); color: var(--text-primary); padding: 12px 24px; border-radius: 24px; font-size: 14px; opacity: 0; transition: all 0.3s; z-index: 1000; pointer-events: none; border: 1px solid var(--border); white-space: nowrap; }
+        .m-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .m-toast.success { border-color: var(--success); }
+        .m-toast.error { border-color: var(--danger); }
+
+        /* ====== 加载遮罩 ====== */
+        .m-loading { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.8); z-index: 200; align-items: center; justify-content: center; flex-direction: column; gap: 12px; }
+        .m-loading.show { display: flex; }
+        .m-spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: mspin 0.8s linear infinite; }
+        @keyframes mspin { to { transform: rotate(360deg); } }
+        .m-loading-text { font-size: 14px; color: var(--text-secondary); }
+
+        /* ====== 空状态 ====== */
+        .m-empty { text-align: center; padding: 48px 20px; color: var(--text-secondary); }
+        .m-empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+        .m-empty-text { font-size: 14px; }
+
+        /* ====== 模态框 ====== */
+        .m-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 300; display: none; align-items: flex-end; justify-content: center; }
+        .m-modal-overlay.show { display: flex; }
+        .m-modal { background: var(--bg-secondary); border-radius: 20px 20px 0 0; width: 100%; max-height: 85vh; overflow-y: auto; animation: mslideup 0.3s ease; }
+        @keyframes mslideup { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .m-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg-secondary); z-index: 1; }
+        .m-modal-title { font-size: 16px; font-weight: 600; }
+        .m-modal-close { width: 32px; height: 32px; border-radius: 50%; background: var(--bg-tertiary); border: none; color: var(--text-primary); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .m-modal-body { padding: 16px 20px 32px; }
+
+        /* ====== 监护人警告弹窗 ====== */
+        .m-guardian-modal { background: var(--bg-secondary); border-radius: 20px 20px 0 0; width: 100%; }
+        .m-guardian-modal-header { background: rgba(239,68,68,0.2); padding: 20px; text-align: center; border-radius: 20px 20px 0 0; }
+        .m-guardian-modal-icon { font-size: 48px; margin-bottom: 8px; }
+        .m-guardian-modal-title { font-size: 18px; font-weight: 700; color: var(--danger); margin-bottom: 4px; }
+        .m-guardian-modal-body { padding: 20px; }
+        .m-guardian-modal-tip { background: rgba(99,102,241,0.1); border-radius: var(--radius-md); padding: 14px; margin-top: 12px; }
+        .m-guardian-modal-tip-title { font-size: 13px; font-weight: 600; color: var(--primary-light); margin-bottom: 6px; }
+        .m-guardian-modal-tip-content { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+        .m-guardian-modal-btn { width: 100%; padding: 14px; background: var(--primary); border: none; border-radius: var(--radius-md); color: white; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 12px; }
+
+        /* ====== 报告统计 ====== */
+        .m-chart-card { background: var(--bg-secondary); border-radius: var(--radius-lg); margin: 0 16px 12px; padding: 16px; }
+        .m-chart-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+
+        /* ====== 举报记录 ====== */
+        .m-report-item { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 14px; margin: 0 16px 10px; border-left: 4px solid var(--primary); }
+        .m-report-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .m-report-type { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+        .m-report-status { font-size: 11px; padding: 3px 10px; border-radius: 12px; }
+        .m-report-status.pending { background: rgba(245,158,11,0.2); color: var(--warning); }
+        .m-report-status.verified { background: rgba(16,185,129,0.2); color: var(--success); }
+        .m-report-status.rejected { background: rgba(239,68,68,0.2); color: var(--danger); }
+        .m-report-content { font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; line-height: 1.4; }
+        .m-report-time { font-size: 11px; color: var(--text-muted); }
+
+        /* ====== 通用输入 ====== */
+        .m-input-wrap { padding: 0 16px; margin-bottom: 12px; }
+        .m-input-label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; font-weight: 500; }
+        .m-input-field { width: 100%; padding: 12px 14px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-md); color: var(--text-primary); font-size: 14px; }
+        .m-input-field:focus { outline: none; border-color: var(--primary); }
+        .m-select { width: 100%; padding: 12px 14px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-md); color: var(--text-primary); font-size: 14px; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+        .m-select:focus { outline: none; border-color: var(--primary); }
+
+        /* ====== 历史记录 ====== */
+        .m-history-item { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 14px; margin: 0 16px 10px; cursor: pointer; transition: all 0.2s; border: 2px solid transparent; }
+        .m-history-item:active { border-color: var(--primary); }
+        .m-history-item.active { border-color: var(--primary); background: rgba(99,102,241,0.08); }
+        .m-history-date { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+        .m-history-preview { font-size: 12px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .m-history-count { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+        /* ====== 开关 ====== */
+        .m-toggle { width: 44px; height: 26px; border-radius: 13px; background: var(--bg-tertiary); border: none; cursor: pointer; position: relative; transition: background 0.2s; flex-shrink: 0; }
+        .m-toggle.on { background: var(--primary); }
+        .m-toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: white; transition: transform 0.2s; }
+        .m-toggle.on::after { transform: translateX(18px); }
+
+        /* ====== 分隔线 ====== */
+        .m-divider { height: 1px; background: var(--border); margin: 8px 16px; }
+
+        /* ====== 操作日志页面 ====== */
+        .m-log-item { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 14px; margin: 0 16px 10px; }
+        .m-log-action { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+        .m-log-detail { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+        .m-log-time { font-size: 11px; color: var(--text-muted); }
+
+        /* ====== 搜索框 ====== */
+        .m-search-wrap { padding: 0 16px; margin-bottom: 12px; }
+        .m-search-box { display: flex; align-items: center; gap: 10px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 10px 14px; }
+        .m-search-box input { flex: 1; background: none; border: none; color: var(--text-primary); font-size: 14px; }
+        .m-search-box input:focus { outline: none; }
+        .m-search-box input::placeholder { color: var(--text-muted); }
+        .m-search-icon { color: var(--text-muted); font-size: 16px; }
+    </style>
+</head>
+<body class="no-auth">
+
+<!-- ====== Toast 通知 ====== -->
+<div id="mToast" class="m-toast"></div>
+
+<!-- ====== 加载遮罩 ====== -->
+<div id="mLoading" class="m-loading">
+    <div class="m-spinner"></div>
+    <div class="m-loading-text" id="mLoadingText">加载中...</div>
+</div>
+
+<!-- ====== 模态框：监护人警告 ====== -->
+<div id="mGuardianModal" class="m-modal-overlay" onclick="if(event.target===this)closeGuardianModal()">
+    <div class="m-guardian-modal">
+        <div class="m-guardian-modal-header">
+            <div class="m-guardian-modal-icon">🚨</div>
+            <div class="m-guardian-modal-title">高风险预警</div>
+        </div>
+        <div class="m-guardian-modal-body">
+            <div id="mGuardianMsg" style="font-size:14px;color:var(--text-secondary);line-height:1.6;margin-bottom:12px;">检测到您可能正在遭遇诈骗，您的监护人已收到通知提醒。</div>
+            <div id="mGuardianDetail" style="font-size:13px;color:var(--text-secondary);"></div>
+            <div class="m-guardian-modal-tip">
+                <div class="m-guardian-modal-tip-title">💡 防范建议</div>
+                <div class="m-guardian-modal-tip-content">请立即停止任何资金操作，不要向陌生人转账。如有疑问，请拨打 110 或到就近派出所咨询。</div>
+            </div>
+            <button class="m-guardian-modal-btn" onclick="closeGuardianModal()">我已知晓</button>
+        </div>
+    </div>
+</div>
+
+<!-- ====== 模态框：添加监护人 ====== -->
+<div id="mGuardianFormModal" class="m-modal-overlay" onclick="if(event.target===this)closeGuardianFormModal()">
+    <div class="m-modal">
+        <div class="m-modal-header">
+            <div class="m-modal-title">添加监护人</div>
+            <button class="m-modal-close" onclick="closeGuardianFormModal()">✕</button>
+        </div>
+        <div class="m-modal-body">
+            <div class="m-input-wrap">
+                <label class="m-input-label">关系</label>
+                <select class="m-select" id="mGuardianRel">
+                    <option value="父亲">父亲</option>
+                    <option value="母亲">母亲</option>
+                    <option value="配偶">配偶</option>
+                    <option value="子女">子女</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+            <div class="m-input-wrap">
+                <label class="m-input-label">对方用户名</label>
+                <input class="m-input-field" id="mGuardianUser" placeholder="请输入对方在平台的用户名">
+            </div>
+            <div class="m-input-wrap">
+                <label class="m-input-label">通知触发等级</label>
+                <select class="m-select" id="mGuardianLevel">
+                    <option value="high">高风险（等级3-4）</option>
+                    <option value="emergency">紧急（等级4）</option>
+                </select>
+            </div>
+            <button class="form-btn" onclick="submitGuardian()" style="margin-top:8px;">确认添加</button>
+        </div>
+    </div>
+</div>
+
+<!-- ====== 模态框：添加邮箱 ====== -->
+<div id="mEmailModal" class="m-modal-overlay" onclick="if(event.target===this)closeEmailModal()">
+    <div class="m-modal">
+        <div class="m-modal-header">
+            <div class="m-modal-title">添加邮箱监控</div>
+            <button class="m-modal-close" onclick="closeEmailModal()">✕</button>
+        </div>
+        <div class="m-modal-body">
+            <div class="m-input-wrap">
+                <label class="m-input-label">邮箱地址</label>
+                <input class="m-input-field" id="mEmailAddr" placeholder="如：123456@qq.com">
+            </div>
+            <div class="m-input-wrap">
+                <label class="m-input-label">用户名（邮箱前缀）</label>
+                <input class="m-input-field" id="mEmailUser" placeholder="请输入邮箱用户名">
+            </div>
+            <div class="m-input-wrap">
+                <label class="m-input-label">密码/授权码</label>
+                <input class="m-input-field" id="mEmailPwd" type="password" placeholder="请输入密码或邮箱授权码">
+            </div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">提示：QQ邮箱请使用<strong>授权码</strong>而非登录密码，可在 QQ 邮箱设置 → 账户 中生成。</div>
+            <button class="form-btn" onclick="submitEmailConfig()" style="margin-top:4px;">确认添加</button>
+        </div>
+    </div>
+</div>
+
+<!-- ====== 模态框：举报详情 ====== -->
+<div id="mReportDetailModal" class="m-modal-overlay" onclick="if(event.target===this)closeReportDetailModal()">
+    <div class="m-modal">
+        <div class="m-modal-header">
+            <div class="m-modal-title">举报详情</div>
+            <button class="m-modal-close" onclick="closeReportDetailModal()">✕</button>
+        </div>
+        <div class="m-modal-body" id="mReportDetailBody"></div>
+    </div>
+</div>
+
+<!-- ====== 模态框：帮助 ====== -->
+<div id="mHelpModal" class="m-modal-overlay" onclick="if(event.target===this)closeHelpModal()">
+    <div class="m-modal">
+        <div class="m-modal-header">
+            <div class="m-modal-title">使用手册</div>
+            <button class="m-modal-close" onclick="closeHelpModal()">✕</button>
+        </div>
+        <div class="m-modal-body">
+            <div style="font-size:14px;line-height:1.8;color:var(--text-secondary);">
+                <p style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:12px;">🔍 风险分析</p>
+                <p style="margin-bottom:16px;">发送可疑短信、聊天记录等内容，我会分析是否存在诈骗风险。</p>
+                <p style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:12px;">💬 反诈助手</p>
+                <p style="margin-bottom:16px;">像聊天一样咨询反诈问题，获得针对性的防骗建议。</p>
+                <p style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:12px;">📚 知识百科</p>
+                <p style="margin-bottom:16px;">学习12种常见诈骗类型的套路和防范技巧。</p>
+                <p style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:12px;">🛡️ 预警中心</p>
+                <p style="margin-bottom:16px;">查看本人及被监护人的风险预警记录。</p>
+                <p style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:12px;">👨‍👩‍👧 监护人</p>
+                <p style="margin-bottom:16px;">添加紧急联系人，高风险时系统自动通知监护人。</p>
+                <p style="font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:12px;">📤 我要举报</p>
+                <p style="margin-bottom:16px;">提交发现的诈骗线索，帮助优化检测能力。</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ====== 登录页 ====== -->
+<div id="authPage" class="auth-page">
+    <div class="auth-logo">
+        <div class="auth-logo-icon">🛡️</div>
+        <h1>SmartGuard</h1>
+        <p>智能反诈助手，守护您的财产安全</p>
+    </div>
+    <div class="auth-tabs">
+        <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">登录</button>
+        <button class="auth-tab" id="tabRegister" onclick="switchAuthTab('register')">注册</button>
+    </div>
+    <div class="auth-form-wrap">
+        <!-- 登录表单 -->
+        <form class="auth-form active" id="loginForm" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label class="form-label">用户名</label>
+                <input type="text" class="form-input" id="loginUsername" placeholder="请输入用户名" autocomplete="username" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">密码</label>
+                <input type="password" class="form-input" id="loginPassword" placeholder="请输入密码" autocomplete="current-password" required>
+            </div>
+            <div id="loginError" class="form-error"></div>
+            <div id="loginSuccess" class="form-success"></div>
+            <button type="submit" class="form-btn" id="loginBtn">登 录</button>
+        </form>
+        <!-- 注册表单 -->
+        <form class="auth-form" id="registerForm" onsubmit="handleRegister(event)">
+            <div class="form-group">
+                <label class="form-label">用户名 <span style="color:var(--danger)">*</span></label>
+                <input type="text" class="form-input" id="regUsername" placeholder="3-20位字母、数字或下划线" required pattern="[a-zA-Z0-9_]{3,20}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">密码 <span style="color:var(--danger)">*</span></label>
+                <input type="password" class="form-input" id="regPassword" placeholder="至少6位" required minlength="6">
+            </div>
+            <div class="form-group">
+                <label class="form-label">邮箱（选填）</label>
+                <input type="email" class="form-input" id="regEmail" placeholder="选填">
+            </div>
+            <div id="registerError" class="form-error"></div>
+            <div id="registerSuccess" class="form-success"></div>
+            <button type="submit" class="form-btn" id="registerBtn">注 册</button>
+        </form>
+    </div>
+    <div style="text-align:center;padding:20px;font-size:12px;color:var(--text-muted);">
+        <span onclick="switchAuthTab('login')">已有账号？</span>
+        <span style="color:var(--primary-light);cursor:pointer;margin-left:4px;" onclick="switchAuthTab('register')">立即登录</span>
+    </div>
+</div>
+
+<!-- ====== 主应用 ====== -->
+<div id="mainApp" style="display:none;height:100vh;display:none;flex-direction:column;">
+
+    <!-- 顶部栏 -->
+    <div class="m-header" id="mHeader">
+        <button class="m-header-back" id="mBackBtn" style="display:none;" onclick="goBack()">←</button>
+        <div class="m-header-title" id="mHeaderTitle">SmartGuard</div>
+        <div class="m-header-action" id="mHeaderAction"></div>
+    </div>
+
+    <!-- 主内容 -->
+    <div class="m-content" id="mContent">
+
+        <!-- ====== 首页：风险分析/反诈助手/百科 ====== -->
+        <div class="m-page active" id="pageHome">
+            <!-- 模式切换 -->
+            <div class="m-mode-bar">
+                <button class="m-mode-btn active" data-mode="risk" onclick="switchMMode('risk')">
+                    <span class="icon">🔍</span> 风险分析
+                </button>
+                <button class="m-mode-btn" data-mode="chat" onclick="switchMMode('chat')">
+                    <span class="icon">💬</span> 反诈助手
+                </button>
+            </div>
+            <!-- 聊天界面 -->
+            <div id="mChatWrap">
+                <div class="m-chat-messages" id="mChatMessages">
+                    <div class="m-welcome" id="mWelcome">
+                        <h3>🔍 如何使用风险分析？</h3>
+                        <p>把你收到的可疑短信、来电内容、聊天记录等发给我，我会分析是否存在诈骗风险，并给出专业建议。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== 预警中心 ====== -->
+        <div class="m-page" id="pageAlert">
+            <div class="m-tab-bar" style="margin-top:12px;">
+                <button class="m-tab active" onclick="switchAlertTab('self')">我的预警</button>
+                <button class="m-tab" onclick="switchAlertTab('guardian')">被监护人</button>
+                <button class="m-tab" onclick="switchAlertTab('email')">邮件预警</button>
+            </div>
+            <div id="mAlertSelf">
+                <div id="mAlertSelfList"></div>
+            </div>
+            <div id="mAlertGuardian" style="display:none;">
+                <div id="mGuardianAlertList"></div>
+            </div>
+            <div id="mAlertEmail" style="display:none;">
+                <div id="mEmailAlertList"></div>
+            </div>
+        </div>
+
+        <!-- ====== 百科 ====== -->
+        <div class="m-page" id="pageLearn">
+            <div id="mLearnList">
+                <div class="m-page-header"><div class="m-page-title">📚 知识百科</div><div class="m-page-sub">了解各类诈骗手法，提升防骗意识</div></div>
+                <div class="m-scam-grid" id="mScamGrid"></div>
+            </div>
+            <div id="mLearnDetail" style="display:none;"></div>
+        </div>
+
+        <!-- ====== 举报 ====== -->
+        <div class="m-page" id="pageReport">
+            <div class="m-tab-bar" style="margin-top:12px;">
+                <button class="m-tab active" onclick="switchReportTab('submit')">提交举报</button>
+                <button class="m-tab" onclick="switchReportTab('history')">举报记录</button>
+                <button class="m-tab" onclick="switchReportTab('stats')">统计信息</button>
+            </div>
+            <!-- 提交举报 -->
+            <div id="mReportSubmit">
+                <div class="m-page-header"><div class="m-page-title">📤 我要举报</div><div class="m-page-sub">发现诈骗线索？告诉我们，帮助更多人</div></div>
+                <div class="m-card">
+                    <div class="m-card-title">选择诈骗类型</div>
+                    <div class="m-type-grid" id="mReportTypeGrid"></div>
+                </div>
+                <div class="m-input-wrap">
+                    <label class="m-input-label">骗子话术/内容 <span style="color:var(--danger)">*</span></label>
+                    <textarea class="m-textarea" id="mReportContent" placeholder="请详细描述骗子的说辞和行为..."></textarea>
+                </div>
+                <div class="m-input-wrap">
+                    <label class="m-input-label">骗子联系方式</label>
+                    <input class="m-input-field" id="mReportContact" placeholder="电话、微信号、QQ号等（选填）">
+                </div>
+                <div class="m-input-wrap">
+                    <label class="m-input-label">骗子账号</label>
+                    <input class="m-input-field" id="mReportAccount" placeholder="银行账号、支付宝等（选填）">
+                </div>
+                <div class="m-input-wrap">
+                    <label class="m-input-label">涉案金额（元）</label>
+                    <input class="m-input-field" id="mReportAmount" type="number" placeholder="0" inputmode="numeric">
+                </div>
+                <div class="m-submit-wrap">
+                    <button class="form-btn" onclick="submitReport()">提交举报</button>
+                </div>
+            </div>
+            <!-- 举报记录 -->
+            <div id="mReportHistory" style="display:none;">
+                <div id="mReportList"></div>
+            </div>
+            <!-- 统计信息 -->
+            <div id="mReportStats" style="display:none;">
+                <div id="mReportStatsContent"></div>
+            </div>
+        </div>
+
+        <!-- ====== 我的 ====== -->
+        <div class="m-page" id="pageMine">
+            <div class="m-profile-card" id="mProfileCard"></div>
+            <div class="m-settings-list">
+                <div class="m-settings-group">
+                    <div class="m-settings-item" onclick="openPage('pageProfileEdit')">
+                        <div class="m-settings-left"><span class="m-settings-icon">👤</span><span class="m-settings-label">编辑资料</span></div>
+                        <span class="m-settings-arrow">›</span>
+                    </div>
+                    <div class="m-settings-item" onclick="openPage('pageGuardian')">
+                        <div class="m-settings-left"><span class="m-settings-icon">👨‍👩‍👧</span><span class="m-settings-label">监护人管理</span></div>
+                        <span class="m-settings-arrow">›</span>
+                    </div>
+                    <div class="m-settings-item" onclick="openPage('pageHistory')">
+                        <div class="m-settings-left"><span class="m-settings-icon">📋</span><span class="m-settings-label">历史记录</span></div>
+                        <span class="m-settings-arrow">›</span>
+                    </div>
+                    <div class="m-settings-item" onclick="openPage('pageReport2')">
+                        <div class="m-settings-left"><span class="m-settings-icon">📊</span><span class="m-settings-label">安全报告</span></div>
+                        <span class="m-settings-arrow">›</span>
+                    </div>
+                </div>
+                <div class="m-settings-group">
+                    <div class="m-settings-item" onclick="openPage('pageEmailMonitor')">
+                        <div class="m-settings-left"><span class="m-settings-icon">📧</span><span class="m-settings-label">邮件监控</span></div>
+                        <span class="m-settings-arrow">›</span>
+                    </div>
+                    <div class="m-settings-item" onclick="openPage('pageSettings')">
+                        <div class="m-settings-left"><span class="m-settings-icon">⚙️</span><span class="m-settings-label">通知设置</span></div>
+                        <span class="m-settings-arrow">›</span>
+                    </div>
+                </div>
+                <div class="m-settings-group">
+                    <div class="m-settings-item" onclick="showHelp()">
+                        <div class="m-settings-left"><span class="m-settings-icon">📖</span><span class="m-settings-label">使用手册</span></div>
+                        <span class="m-settings-arrow">›</span>
+                    </div>
+                    <div class="m-settings-item" onclick="handleLogout()">
+                        <div class="m-settings-left"><span class="m-settings-icon" style="color:var(--danger)">🚪</span><span class="m-settings-label" style="color:var(--danger)">退出登录</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== 子页面 ====== -->
+        <!-- 编辑资料 -->
+        <div class="m-page" id="pageProfileEdit">
+            <div class="m-page-header"><div class="m-page-title">👤 编辑资料</div></div>
+            <div class="m-input-wrap"><label class="m-input-label">昵称</label><input class="m-input-field" id="mEditNickname" placeholder="请输入昵称"></div>
+            <div class="m-input-wrap"><label class="m-input-label">个人简介</label><textarea class="m-textarea" id="mEditBio" placeholder="介绍一下自己..."></textarea></div>
+            <div class="m-input-wrap">
+                <label class="m-input-label">年龄段</label>
+                <select class="m-select" id="mEditAge">
+                    <option value="">请选择</option><option value="18-25">18-25岁</option><option value="26-35">26-35岁</option>
+                    <option value="36-45">36-45岁</option><option value="46-55">46-55岁</option><option value="56+">56岁以上</option>
+                </select>
+            </div>
+            <div class="m-input-wrap">
+                <label class="m-input-label">职业</label>
+                <select class="m-select" id="mEditOccupation">
+                    <option value="">请选择</option><option value="学生">学生</option><option value="教师">教师</option>
+                    <option value="医生">医生</option><option value="企业职员">企业职员</option><option value="自由职业">自由职业</option>
+                    <option value="退休人员">退休人员</option><option value="其他">其他</option>
+                </select>
+            </div>
+            <div class="m-input-wrap">
+                <label class="m-input-label">性别</label>
+                <select class="m-select" id="mEditGender">
+                    <option value="">请选择</option><option value="male">男</option><option value="female">女</option><option value="other">其他</option>
+                </select>
+            </div>
+            <div class="m-submit-wrap"><button class="form-btn" onclick="saveProfile()">保存资料</button></div>
+        </div>
+
+        <!-- 监护人管理 -->
+        <div class="m-page" id="pageGuardian">
+            <div class="m-page-header"><div class="m-page-title">👨‍👩‍👧 监护人管理</div></div>
+            <div class="m-tab-bar" style="margin:0 16px 12px;">
+                <button class="m-tab active" onclick="switchGuardianTab('list')">已绑定</button>
+                <button class="m-tab" onclick="switchGuardianTab('sent')">发出的邀请</button>
+                <button class="m-tab" onclick="switchGuardianTab('received')">收到的邀请</button>
+            </div>
+            <div id="mGuardianList"></div>
+            <div id="mGuardianSent" style="display:none;"></div>
+            <div id="mGuardianReceived" style="display:none;"></div>
+            <div class="m-submit-wrap"><button class="form-btn" onclick="openGuardianForm()">+ 添加监护人</button></div>
+        </div>
+
+        <!-- 历史记录 -->
+        <div class="m-page" id="pageHistory">
+            <div class="m-page-header" id="mHistoryHeader">
+                <div class="m-page-title" id="mHistoryTitle">📋 历史记录</div>
+            </div>
+            <div id="mHistoryContent" style="flex:1;overflow-y:auto;"></div>
+        </div>
+
+        <!-- 安全报告 -->
+        <div class="m-page" id="pageReport2">
+            <div class="m-page-header"><div class="m-page-title">📊 安全报告</div></div>
+            <div class="m-tab-bar" style="margin:0 16px 12px;">
+                <button class="m-tab active" onclick="switchReport2Tab('today')">今日</button>
+                <button class="m-tab" onclick="switchReport2Tab('week')">本周</button>
+                <button class="m-tab" onclick="switchReport2Tab('month')">本月</button>
+            </div>
+            <div id="mReport2Content"></div>
+        </div>
+
+        <!-- 邮件监控 -->
+        <div class="m-page" id="pageEmailMonitor">
+            <div class="m-page-header"><div class="m-page-title">📧 邮件监控</div><div class="m-page-sub">自动检测邮件中的诈骗风险</div></div>
+            <div id="mEmailConfigList"></div>
+            <div class="m-submit-wrap"><button class="form-btn" onclick="openEmailForm()">+ 添加邮箱</button></div>
+        </div>
+
+        <!-- 通知设置 -->
+        <div class="m-page" id="pageSettings">
+            <div class="m-page-header"><div class="m-page-title">⚙️ 通知设置</div></div>
+            <div class="m-settings-list" style="margin:0;">
+                <div class="m-settings-group">
+                    <div class="m-settings-item">
+                        <div class="m-settings-left"><span class="m-settings-icon">🔔</span><span class="m-settings-label">高风险预警通知</span></div>
+                        <button class="m-toggle on" id="toggleAlert" onclick="toggleSetting('alert', this)"></button>
+                    </div>
+                    <div class="m-settings-item">
+                        <div class="m-settings-left"><span class="m-settings-icon">📅</span><span class="m-settings-label">每日报告</span></div>
+                        <button class="m-toggle" id="toggleDaily" onclick="toggleSetting('daily', this)"></button>
+                    </div>
+                </div>
+                <div class="m-settings-group">
+                    <div class="m-settings-item">
+                        <div class="m-settings-left"><span class="m-settings-icon">ℹ️</span><span class="m-settings-label">账户信息</span></div>
+                        <span class="m-settings-arrow" id="mAccountInfo" style="font-size:12px;color:var(--text-muted);">—</span>
+                    </div>
+                    <div class="m-settings-item">
+                        <div class="m-settings-left"><span class="m-settings-icon">📅</span><span class="m-settings-label">注册时间</span></div>
+                        <span class="m-settings-arrow" id="mRegTime" style="font-size:12px;color:var(--text-muted);">—</span>
+                    </div>
+                </div>
+                <div class="m-settings-group">
+                    <div class="m-settings-item" style="cursor:default;">
+                        <div class="m-settings-left"><span class="m-settings-icon">🔒</span><span class="m-settings-label">版本</span></div>
+                        <span class="m-settings-arrow" style="font-size:12px;color:var(--text-muted);">v1.0.0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- end m-content -->
+
+    <!-- 聊天输入栏（仅首页固定底部） -->
+    <div class="m-input-bar" id="mInputBar" style="display:none;">
+        <div class="m-attachment-preview" id="mAttachmentPreview"></div>
+        <div style="display:flex;gap:8px;align-items:center;">
+            <button class="m-input-btn" onclick="document.getElementById('mImageInput').click()" title="上传图片">📷</button>
+            <button class="m-input-btn" onclick="document.getElementById('mAudioUploadInput').click()" title="上传音频">📎</button>
+            <button class="m-input-btn m-rec-btn" id="mRecBtn" onclick="toggleRecording()" title="按住说话">🎤</button>
+            <textarea class="m-input" id="mInput" placeholder="粘贴可疑内容：短信、聊天记录、网址..." rows="1"></textarea>
+            <button class="m-send-btn" id="mSendBtn" onclick="sendMMsg()">➤</button>
+        </div>
+    </div>
+    <input type="file" id="mImageInput" name="image" accept="image/*" style="display:none;" onchange="handleMImageUpload(this)">
+    <input type="file" id="mAudioUploadInput" name="audio" accept="audio/*" style="display:none;" onchange="handleMAudioUpload(this)">
+
+    <!-- 底部导航 -->
+    <nav class="m-nav">
+        <button class="m-nav-item active" data-page="pageHome" onclick="mNavTo('pageHome')">
+            <span class="m-nav-icon">🏠</span>
+            <span>首页</span>
+        </button>
+        <button class="m-nav-item" data-page="pageAlert" onclick="mNavTo('pageAlert')">
+            <span class="m-nav-icon">🛡️</span>
+            <span>预警</span>
+        </button>
+        <button class="m-nav-item" data-page="pageLearn" onclick="mNavTo('pageLearn')">
+            <span class="m-nav-icon">📚</span>
+            <span>百科</span>
+        </button>
+        <button class="m-nav-item" data-page="pageReport" onclick="mNavTo('pageReport')">
+            <span class="m-nav-icon">📤</span>
+            <span>举报</span>
+        </button>
+        <button class="m-nav-item" data-page="pageMine" onclick="mNavTo('pageMine')">
+            <span class="m-nav-icon">👤</span>
+            <span>我的</span>
+        </button>
+    </nav>
+
+</div><!-- end mainApp -->
+
+<script>
+var API_BASE = '/api/v1';
+var currentUser = null;
+// 初始化 API_BASE：优先使用用户配置的地址，其次使用当前页面域名（Capacitor 场景）
+(function initApiBase() {
+    var saved = localStorage.getItem('smartguard_server');
+    if (saved) {
+        API_BASE = saved + '/api/v1';
+    } else {
+        // Capacitor WebView: window.location.origin 就是 APK 的加载地址
+        // 在 ngrok 穿透后访问时，origin = https://xxx.ngrok-free.dev
+        var origin = window.location.origin;
+        if (origin && !origin.startsWith('file://') && !origin.startsWith('capacitor://')) {
+            API_BASE = origin + '/api/v1';
+        }
+    }
+})();
+var currentToken = null;
+var currentMode = 'risk';
+var messages = { risk: [], chat: [], learn: [] };
+var pageStack = ['pageHome'];
+// 录音状态
+var loginSessionId = localStorage.getItem('smartguard_login_session') || 'm_' + Date.now();
+var pendingAttachments = { image: null, audio: null };
+var mediaRecorder = null;
+var audioChunks = [];
+var isRecording = false;
+var alertSessionShown = false; // 本次进入预警页面已弹过，不再重复弹
+localStorage.setItem('smartguard_login_session', loginSessionId);
+// 持久化 API_BASE，用户可在设置中修改
+var API_SERVER = localStorage.getItem('smartguard_server') || window.location.origin;
+function getApiBase() {
+    var saved = localStorage.getItem('smartguard_server');
+    return saved ? saved + '/api/v1' : '/api/v1';
+}
+function saveApiServer(url) {
+    localStorage.setItem('smartguard_server', url);
+    API_SERVER = url;
+    API_BASE = url + '/api/v1';
+}
+
+// ====== 初始化 ======
+document.addEventListener('DOMContentLoaded', function() {
+    checkAuth();
+    loadEncyclopedia();
+    initReportTypes();
+    autoResizeTextarea();
+});
+
+async function checkAuth() {
+    var token = localStorage.getItem('smartguard_token');
+    if (!token) {
+        showAuthPage();
+        return;
+    }
+    try {
+        var res = await fetch(getApiBase() + '/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('Unauthorized');
+        var data = await res.json();
+        currentUser = data;
+        currentToken = token;
+        showMainApp();
+    } catch (e) {
+        localStorage.removeItem('smartguard_token');
+        showAuthPage();
+    }
+}
+
+function showAuthPage() {
+    document.getElementById('authPage').style.display = 'flex';
+    document.getElementById('mainApp').style.display = 'none';
+    document.getElementById('mInputBar').style.display = 'none';
+    document.body.classList.add('no-auth');
+}
+
+function showMainApp() {
+    document.getElementById('authPage').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'flex';
+    document.body.classList.remove('no-auth');
+    document.getElementById('mInputBar').style.display = 'flex';
+    loadUserProfile();
+    loadAlerts();
+}
+
+// ====== 认证 ======
+function switchAuthTab(tab) {
+    document.querySelectorAll('.auth-tab').forEach(function(t) { t.classList.remove('active'); });
+    document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+    document.querySelectorAll('.auth-form').forEach(function(f) { f.classList.remove('active'); });
+    document.getElementById(tab === 'login' ? 'loginForm' : 'registerForm').classList.add('active');
+}
+
+async function handleLogin(e) {
+    e.preventDefault();
+    var btn = document.getElementById('loginBtn');
+    var errEl = document.getElementById('loginError');
+    var sucEl = document.getElementById('loginSuccess');
+    errEl.style.display = 'none'; sucEl.style.display = 'none';
+    btn.textContent = '登录中...'; btn.disabled = true;
+    var username = document.getElementById('loginUsername').value;
+    var password = document.getElementById('loginPassword').value;
+    try {
+        var res = await fetch(getApiBase() + '/auth/login', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: username, password: password, portal: 'user' })
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.detail || '登录失败');
+        currentToken = data.token;
+        currentUser = data.user;
+        localStorage.setItem('smartguard_token', data.token);
+        loginSessionId = 'm_' + Date.now();
+        localStorage.setItem('smartguard_login_session', loginSessionId);
+        sucEl.textContent = '✓ 登录成功'; sucEl.style.display = 'block';
+        // 请求通知权限
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+        setTimeout(function() { showMainApp(); }, 500);
+    } catch (err) {
+        errEl.textContent = err.message; errEl.style.display = 'block';
+        btn.textContent = '登 录';
+    }
+    btn.disabled = false;
+}
+
+async function handleRegister(e) {
+    e.preventDefault();
+    var btn = document.getElementById('registerBtn');
+    var errEl = document.getElementById('registerError');
+    var sucEl = document.getElementById('registerSuccess');
+    errEl.style.display = 'none'; sucEl.style.display = 'none';
+    btn.textContent = '注册中...'; btn.disabled = true;
+    var username = document.getElementById('regUsername').value;
+    var password = document.getElementById('regPassword').value;
+    var email = document.getElementById('regEmail').value;
+    try {
+        var body = { username: username, password: password };
+        if (email && email.trim()) body.email = email.trim();
+        var res = await fetch(getApiBase() + '/auth/register', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.detail || '注册失败');
+        sucEl.textContent = '✓ 注册成功，请登录'; sucEl.style.display = 'block';
+        setTimeout(function() { switchAuthTab('login'); }, 1000);
+    } catch (err) {
+        errEl.textContent = err.message; errEl.style.display = 'block';
+    }
+    btn.textContent = '注 册'; btn.disabled = false;
+}
+
+function handleLogout() {
+    localStorage.removeItem('smartguard_token');
+    currentUser = null; currentToken = null;
+    messages = { risk: [], chat: [], learn: [] };
+    currentMode = 'risk';
+    showAuthPage();
+}
+
+// ====== 导航 ======
+function mNavTo(pageId) {
+    if (pageId === 'pageHome') {
+        pageStack = ['pageHome'];
+        updateHeader('', '', false);
+    }
+    document.querySelectorAll('.m-nav-item').forEach(function(n) { n.classList.remove('active'); });
+    document.querySelector('[data-page="' + pageId + '"]').classList.add('active');
+    document.querySelectorAll('.m-page').forEach(function(p) { p.classList.remove('active'); });
+    document.getElementById(pageId).classList.add('active');
+    // 首页显示输入栏，其他页面隐藏
+    document.getElementById('mInputBar').style.display = (pageId === 'pageHome') ? 'flex' : 'none';
+    // 触发动态加载
+    if (pageId === 'pageAlert') loadAlerts();
+    if (pageId === 'pageReport') { /* report data loaded on tab switch */ }
+    if (pageId === 'pageMine') loadMineProfile();
+}
+
+function openPage(pageId) {
+    pageStack.push(pageId);
+    document.querySelectorAll('.m-page').forEach(function(p) { p.classList.remove('active'); });
+    document.getElementById(pageId).classList.add('active');
+    updateHeaderForPage(pageId);
+    if (pageId === 'pageGuardian') loadGuardians();
+    if (pageId === 'pageHistory') loadHistory();
+    if (pageId === 'pageReport2') loadReport2('week');
+    if (pageId === 'pageEmailMonitor') loadEmailConfigs();
+    if (pageId === 'pageSettings') loadSettingsInfo();
+}
+
+function goBack() {
+    pageStack.pop();
+    if (pageStack.length === 0) pageStack = ['pageHome'];
+    var top = pageStack[pageStack.length - 1];
+    document.querySelectorAll('.m-page').forEach(function(p) { p.classList.remove('active'); });
+    document.getElementById(top).classList.add('active');
+    updateHeaderForPage(top);
+}
+
+function updateHeaderForPage(pageId) {
+    var titles = {
+        pageProfileEdit: '编辑资料', pageGuardian: '监护人管理', pageHistory: '历史记录',
+        pageReport2: '安全报告', pageEmailMonitor: '邮件监控', pageSettings: '通知设置',
+        pageHome: 'SmartGuard'
+    };
+    updateHeader(titles[pageId] || 'SmartGuard', '', pageId !== 'pageHome');
+}
+
+function updateHeader(title, action, showBack) {
+    document.getElementById('mHeaderTitle').textContent = title || 'SmartGuard';
+    document.getElementById('mBackBtn').style.display = showBack ? 'flex' : 'none';
+}
+
+// ====== Toast / Loading ======
+function showToast(msg, type) {
+    var t = document.getElementById('mToast');
+    t.textContent = msg; t.className = 'm-toast show ' + (type || '');
+    setTimeout(function() { t.classList.remove('show'); }, 2500);
+}
+function showLoading(text) {
+    document.getElementById('mLoadingText').textContent = text || '加载中...';
+    document.getElementById('mLoading').classList.add('show');
+}
+function hideLoading() { document.getElementById('mLoading').classList.remove('show'); }
+
+// ====== 模式切换 ======
+function switchMMode(mode) {
+    currentMode = mode;
+    document.querySelectorAll('.m-mode-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelector('.m-mode-btn[data-mode="' + mode + '"]').classList.add('active');
+    renderMMessages();
+    var placeholders = {
+        risk: '粘贴可疑内容：短信、聊天记录、网址...',
+        chat: '问我任何问题...',
+        learn: '搜索诈骗类型或关键词...'
+    };
+    document.getElementById('mInput').placeholder = placeholders[mode] || placeholders.risk;
+}
+
+// ====== 聊天渲染 ======
+function renderMMessages() {
+    var container = document.getElementById('mChatMessages');
+    var msgs = messages[currentMode] || [];
+    var html = '';
+    if (msgs.length === 0) {
+        var welcomes = {
+            risk: '<div class="m-welcome"><h3>🔍 如何使用风险分析？</h3><p>把你收到的可疑短信、来电内容、聊天记录等发给我，我会分析是否存在诈骗风险，并给出专业建议。</p></div>',
+            chat: '<div class="m-welcome"><h3>💬 反诈助手</h3><p>这个模式下，你可以像和朋友聊天一样问我任何关于诈骗的问题，我会用自然的语言回答你！</p></div>',
+            learn: '<div class="m-welcome"><h3>📚 知识百科</h3><p>点击任意诈骗类型卡片，了解该诈骗的诈骗手法、真实案例和防范技巧。</p></div>'
+        };
+        html = welcomes[currentMode] || welcomes.risk;
+    } else {
+        msgs.forEach(function(m) {
+            var bubble = '';
+            if (m.role === 'user') {
+                bubble = '<div class="m-msg user"><div class="m-msg-bubble">' + escapeHtml(m.content) + '</div></div>';
+            } else if (m.role === 'system') {
+                bubble = '<div class="m-msg system"><div class="m-msg-bubble system-bubble">' + m.content + '</div></div>';
+            } else {
+                var riskHtml = '';
+                if (m.risk_assessment && currentMode === 'risk') {
+                    var lvl = m.risk_assessment.risk_level || 0;
+                    var labels = ['安全', '关注', '警告', '危险', '紧急'];
+                    var riskClass = 'level-' + Math.min(lvl, 4);
+                    riskHtml = '<div class="m-risk-badge ' + riskClass + '">' + labels[Math.min(lvl, 4)] + '</div>';
+                }
+                bubble = '<div class="m-msg assistant">' + riskHtml + '<div class="m-msg-bubble">' + m.content.replace(/\n/g, '<br>') + '</div></div>';
+            }
+            html += bubble;
+        });
+    }
+    container.innerHTML = html;
+    setTimeout(function() { container.scrollTop = container.scrollHeight; }, 50);
+}
+
+function mRenderAttachmentPreview() {
+    var container = document.getElementById('mAttachmentPreview');
+    if (!container) return;
+    var items = [];
+    if (pendingAttachments.image) {
+        items.push('<div class="m-attachment-item">📷 ' + pendingAttachments.image.name +
+            ' <button class="m-remove-btn" onclick="mRemoveAttachment(\'image\')">✕</button></div>');
+    }
+    if (pendingAttachments.audio) {
+        items.push('<div class="m-attachment-item">🎤 ' + pendingAttachments.audio.name +
+            ' <button class="m-remove-btn" onclick="mRemoveAttachment(\'audio\')">✕</button></div>');
+    }
+    container.innerHTML = items.join('');
+}
+
+function mRemoveAttachment(type) {
+    pendingAttachments[type] = null;
+    mRenderAttachmentPreview();
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ====== 发送消息 ======
+async function sendMMsg() {
+    var input = document.getElementById('mInput');
+    var text = input.value.trim();
+    var hasAttachment = pendingAttachments.image || pendingAttachments.audio;
+    if (!text && !hasAttachment) return;
+    if (!currentToken) { showToast('请先登录', 'error'); return; }
+
+    var attachmentParts = [];
+    if (pendingAttachments.image) attachmentParts.push('[上传了图片: ' + pendingAttachments.image.name + ']');
+    if (pendingAttachments.audio) attachmentParts.push('[上传了音频: ' + pendingAttachments.audio.name + ']');
+    var fullContent = text + (attachmentParts.length ? ' ' + attachmentParts.join(' ') : '');
+    if (!text) fullContent = attachmentParts.join(' ');
+
+    messages[currentMode].push({ role: 'user', content: fullContent, timestamp: Date.now() });
+    renderMMessages();
+    input.value = '';
+    autoResizeTextarea();
+
+    var imgFile = pendingAttachments.image;
+    var audFile = pendingAttachments.audio;
+    pendingAttachments = { image: null, audio: null };
+    mRenderAttachmentPreview();
+
+    showLoading('分析中...');
+    try {
+        var form = new FormData();
+        if (text) form.append('text', text);
+        form.append('user_id', currentUser.id);
+        form.append('mode', currentMode);
+        form.append('login_session_id', loginSessionId);
+        if (imgFile) form.append('image', imgFile);
+        if (audFile) form.append('audio', audFile);
+        var res = await fetch(getApiBase() + '/chat', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + currentToken },
+            body: form
+        });
+        var data = await res.json();
+        hideLoading();
+        var riskLvl = data.risk_assessment ? (data.risk_assessment.risk_level || 0) : 0;
+        if (riskLvl >= 3) {
+            messages[currentMode].push({ role: 'system', content: '⚠️ 系统检测到高风险内容，已触发预警弹窗，请先处理弹窗。', timestamp: Date.now() });
+            renderMMessages();
+            setTimeout(function() { showGuardianModal(data.risk_assessment); }, 100);
+        }
+        messages[currentMode].push({ role: 'assistant', content: data.response || '处理完成', risk_assessment: data.risk_assessment, timestamp: Date.now() });
+        renderMMessages();
+    } catch (e) {
+        hideLoading();
+        var errMsg = e.message || (e && e.toString ? e.toString() : '网络错误，请检查网络连接');
+        messages[currentMode].push({ role: 'assistant', content: '网络错误: ' + errMsg, timestamp: Date.now() });
+        renderMMessages();
+        console.error('sendMMsg error:', e);
+    }
+}
+
+// ====== 文件上传 ======
+async function handleMImageUpload(input) {
+    if (!input.files[0]) return;
+    if (!currentToken) { showToast('请先登录', 'error'); return; }
+    pendingAttachments.image = input.files[0];
+    mRenderAttachmentPreview();
+    input.value = '';
+}
+
+// ====== 实时录音 ======
+var _recStream = null;
+async function toggleRecording() {
+    var btn = document.getElementById('mRecBtn');
+    if (!isRecording) {
+        // 开始录音
+        try {
+            _recStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            // 优先使用 webm/opus（Android 最兼容）
+            var mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+                ? 'audio/webm;codecs=opus'
+                : MediaRecorder.isTypeSupported('audio/mp4')
+                ? 'audio/mp4'
+                : 'audio/ogg';
+            mediaRecorder = new MediaRecorder(_recStream, { mimeType: mimeType });
+            audioChunks = [];
+            mediaRecorder.ondataavailable = function(e) {
+                if (e.data && e.data.size > 0) audioChunks.push(e.data);
+            };
+            mediaRecorder.start(1000);
+            isRecording = true;
+            btn.classList.add('recording');
+            btn.textContent = '⏹';
+            showToast('录音中...', 'info');
+        } catch (err) {
+            showToast('无法访问麦克风，请检查权限设置', 'error');
+            console.error('getUserMedia error:', err);
+        }
+    } else {
+        // 停止录音，ondataavailable 会收集所有 chunks，onstop 后自动上传
+        mediaRecorder.onstop = function() {
+            var blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+            if (_recStream) _recStream.getTracks().forEach(function(t) { t.stop(); });
+            uploadAudioBlob(blob);
+        };
+        mediaRecorder.stop();
+        isRecording = false;
+        btn.classList.remove('recording');
+        btn.textContent = '🎤';
+    }
+}
+
+function uploadAudioBlob(blob) {
+    if (!blob || blob.size === 0) { showToast('录音为空，请重试', 'error'); return; }
+    pendingAttachments.audio = new File([blob], 'recording.' + (blob.type.includes('mp4') ? 'm4a' : 'webm'), { type: blob.type });
+    mRenderAttachmentPreview();
+}
+
+async function handleMAudioUpload(input) {
+    if (!input.files || !input.files[0]) { showToast('未选择音频文件', 'error'); return; }
+    if (!currentToken) { showToast('请先登录', 'error'); return; }
+    pendingAttachments.audio = input.files[0];
+    mRenderAttachmentPreview();
+    input.value = '';
+}
+        renderMMessages();
+    } catch (e) {
+        hideLoading();
+        messages[currentMode].push({ role: 'assistant', content: '语音分析失败: ' + (e.message || String(e)), timestamp: Date.now() });
+        saveMessagesToStorage();
+        renderMMessages();
+    }
+    input.value = '';
+}
+
+// ====== 预警中心 ======
+async function loadAlerts() {
+    try {
+        var res = await fetch(getApiBase() + '/guardians/alerts/self?limit=20', { headers: { 'Authorization': 'Bearer ' + currentToken } });
+        var data = await res.json();
+        // 加载完成后检查是否有未确认的高风险预警，自动弹窗（仅本次session弹一次）
+        if (!alertSessionShown && data.alerts && data.alerts.length > 0) {
+            var topAlert = data.alerts.find(function(a) { return !a.acknowledged && (a.level || 0) >= 3; });
+            if (topAlert) {
+                alertSessionShown = true;
+                var levelLabels = ['安全', '关注', '警告', '危险', '紧急'];
+                document.getElementById('mGuardianMsg').textContent =
+                    '【' + levelLabels[topAlert.level || 0] + '】' + (topAlert.message || topAlert.content || '检测到可疑内容');
+                document.getElementById('mGuardianDetail').innerHTML =
+                    '<strong>' + (topAlert.risk_type || '未知风险') + '</strong>';
+                document.getElementById('mGuardianModal').classList.add('show');
+            }
+        }
+        var html = '';
+        if (data.alerts && data.alerts.length > 0) {
+            data.alerts.forEach(function(a) {
+                var lvl = a.level || 0;
+                var levelClass = lvl >= 3 ? 'high' : (lvl >= 2 ? 'medium' : 'low');
+                var levelLabels = ['安全', '关注', '警告', '危险', '紧急'];
+                html += '<div class="m-alert-item level-' + lvl + '">' +
+                    '<div class="m-alert-header"><span class="m-alert-type">' + (a.risk_type || '未知') + '</span>' +
+                    '<span class="m-alert-level ' + levelClass + '">' + levelLabels[lvl] + '</span></div>' +
+                    '<div class="m-alert-content">' + (a.message || a.content || '') + '</div>' +
+                    '<div class="m-alert-time">' + formatTime(a.created_at) + '</div>' +
+                    (a.acknowledged ? '<span style="font-size:12px;color:var(--success);">✓ 已确认</span>' :
+                        '<button class="m-btn-sm m-btn-primary" onclick="ackAlert(\'' + a.id + '\')">确认处理</button>') +
+                    '</div>';
+            });
+        } else {
+            html = '<div class="m-empty"><div class="m-empty-icon">🛡️</div><div class="m-empty-text">暂无预警记录</div></div>';
+        }
+        document.getElementById('mAlertSelfList').innerHTML = html;
+    } catch (e) {
+        document.getElementById('mAlertSelfList').innerHTML = '<div class="m-empty"><div class="m-empty-icon">⚠️</div><div class="m-empty-text">加载失败: ' + e.message + '</div></div>';
+        console.error('loadAlerts self error:', e);
+    }
+
+    // 加载被监护人预警
+    try {
+        var res2 = await fetch(getApiBase() + '/guardians/protected/alerts?limit=10', { headers: { 'Authorization': 'Bearer ' + currentToken } });
+        var data2 = await res2.json();
+        var html2 = '';
+        if (data2.alerts && data2.alerts.length > 0) {
+            data2.alerts.forEach(function(a) {
+                var lvl = a.level || 0;
+                var levelClass = lvl >= 3 ? 'high' : (lvl >= 2 ? 'medium' : 'low');
+                var levelLabels = ['安全', '关注', '警告', '危险', '紧急'];
+                html2 += '<div class="m-alert-item level-' + lvl + '">' +
+                    '<div class="m-alert-header"><span class="m-alert-type">' + (a.user_name || a.user_id) + ' - ' + (a.risk_type || '未知') + '</span>' +
+                    '<span class="m-alert-level ' + levelClass + '">' + levelLabels[lvl] + '</span></div>' +
+                    '<div class="m-alert-content">' + (a.message || '') + '</div>' +
+                    '<div class="m-alert-time">' + formatTime(a.created_at) + '</div>' +
+                    '</div>';
+            });
+        } else {
+            html2 = '<div class="m-empty"><div class="m-empty-icon">👨‍👩‍👧</div><div class="m-empty-text">暂无被监护人预警</div></div>';
+        }
+        document.getElementById('mGuardianAlertList').innerHTML = html2;
+    } catch (e) {
+        document.getElementById('mGuardianAlertList').innerHTML = '<div class="m-empty"><div class="m-empty-icon">⚠️</div><div class="m-empty-text">加载失败</div></div>';
+    }
+
+    // 加载邮件预警
+    document.getElementById('mEmailAlertList').innerHTML = '<div class="m-empty"><div class="m-empty-icon">📧</div><div class="m-empty-text">暂无邮件预警</div></div>';
+}
+
+async function ackAlert(alertId) {
+    try {
+        await fetch(getApiBase() + '/guardians/alerts/' + alertId + '/acknowledge', { method: 'POST', headers: { 'Authorization': 'Bearer ' + currentToken } });
+        showToast('已确认', 'success');
+        loadAlerts();
+    } catch (e) { showToast('确认失败', 'error'); }
+}
+
+function switchAlertTab(tab) {
+    document.querySelectorAll('#pageAlert .m-tab').forEach(function(t) { t.classList.remove('active'); });
+    event.target.classList.add('active');
+    document.getElementById('mAlertSelf').style.display = tab === 'self' ? '' : 'none';
+    document.getElementById('mAlertGuardian').style.display = tab === 'guardian' ? '' : 'none';
+    document.getElementById('mAlertEmail').style.display = tab === 'email' ? '' : 'none';
+}
+
+// ====== 知识百科 ======
+var encyclopediaData = null;
+function loadEncyclopedia() {
+    var types = [
+        { id: 'police_impersonation', name: '冒充公检法诈骗', icon: '🚔', desc: '假冒公安局、检察院、法院人员', level: 4, color: '#ef4444' },
+        { id: 'investment_fraud', name: '投资理财诈骗', icon: '💰', desc: '虚假投资平台，高收益诱惑', level: 3, color: '#f59e0b' },
+        { id: 'part_time_fraud', name: '兼职刷单诈骗', icon: '💼', desc: '刷单兼职、点赞返利', level: 3, color: '#f59e0b' },
+        { id: 'pig_butchery', name: '杀猪盘诈骗', icon: '💔', desc: '婚恋交友，情感投资后诱导转账', level: 3, color: '#f59e0b' },
+        { id: 'ai_voice_fraud', name: 'AI诈骗', icon: '🤖', desc: 'AI换脸、变声冒充熟人', level: 4, color: '#ef4444' },
+        { id: 'loan_fraud', name: '虚假贷款诈骗', icon: '🏦', desc: '无抵押贷款、套路贷', level: 3, color: '#f59e0b' },
+        { id: 'refund_fraud', name: '购物退款诈骗', icon: '📦', desc: '退款陷阱、双倍赔偿', level: 2, color: '#fbbf24' },
+        { id: 'credit_fraud', name: '虚假征信诈骗', icon: '📊', desc: '征信修复、逾期洗白', level: 2, color: '#fbbf24' },
+        { id: 'gaming_fraud', name: '游戏交易诈骗', icon: '🎮', desc: '游戏装备、账号交易', level: 2, color: '#fbbf24' },
+        { id: 'fan_fraud', name: '追星诈骗', icon: '⭐', desc: '粉丝群、明星福利', level: 2, color: '#fbbf24' },
+        { id: 'medical_fraud', name: '医保诈骗', icon: '🏥', desc: '医保盗用、异地报销', level: 3, color: '#f59e0b' },
+        { id: 'deepfake_fraud', name: '深度伪造诈骗', icon: '🎭', desc: '合成视频、图片诈骗', level: 4, color: '#ef4444' }
+    ];
+    encyclopediaData = types;
+    var html = '';
+    types.forEach(function(t) {
+        html += '<div class="m-scam-card" onclick="showScamDetail(\'' + t.id + '\')">' +
+            '<div class="m-scam-icon">' + t.icon + '</div>' +
+            '<div class="m-scam-name">' + t.name + '</div>' +
+            '<div class="m-scam-desc">' + t.desc + '</div>' +
+            '<div style="margin-top:6px;"><span class="m-risk-badge level-' + Math.min(t.level, 4) + '" style="font-size:10px;padding:2px 8px;">' + (t.level >= 3 ? '高风险' : '中风险') + '</span></div>' +
+            '</div>';
+    });
+    document.getElementById('mScamGrid').innerHTML = html;
+}
+
+function showScamDetail(id) {
+    var details = {
+        police_impersonation: {
+            name: '冒充公检法诈骗', icon: '🚔', level: 4,
+            techniques: ['声称你涉嫌洗钱、贩毒等严重犯罪', '出示伪造的通缉令、逮捕令等法律文书', '要求将资金转入"安全账户"进行核查', '威胁不得与家人联系，否则加重处罚'],
+            tips: ['公检法机关不会通过电话要求转账', '不要轻信来路不明的法律文书', '可通过官方渠道核实对方身份', '遇事多与家人商量，不盲目转账'],
+            signs: ['声称你涉嫌违法', '要求转账到安全账户', '威胁冻结资产', '制造紧张氛围']
+        },
+        investment_fraud: {
+            name: '投资理财诈骗', icon: '💰', level: 3,
+            techniques: ['通过社交媒体或电话推销虚假投资机会', '声称有"内幕消息"或"高回报项目"', '先让受害者小赚几笔建立信任', '诱导大额投入后无法提现'],
+            tips: ['投资理财要通过正规渠道', '警惕"稳赚不赔"的投资', '不要轻信陌生人的投资建议', '高收益必然伴随高风险'],
+            signs: ['承诺高回报低风险', '要求保密', '无法提现', '频繁更换平台']
+        },
+        part_time_fraud: {
+            name: '兼职刷单诈骗', icon: '💼', level: 3,
+            techniques: ['在社交群发布刷单兼职广告', '前几单返佣金获取信任', '逐步加大刷单金额', '以连环任务为由拒绝返款'],
+            tips: ['刷单本身是违法行为', '任何要求先付款的兼职都需警惕', '不要轻信日结高薪兼职', '发现被骗及时报警'],
+            signs: ['需要预付货款', '连环任务', '无法提现', '诱导借贷']
+        },
+        pig_butchery: {
+            name: '杀猪盘诈骗', icon: '💔', level: 3,
+            techniques: ['通过婚恋网站或社交平台寻找目标', '建立感情关系后透露投资内幕', '诱导受害者到虚假平台投资', '骗取大额资金后消失'],
+            tips: ['网恋要谨慎核实对方身份', '不要轻信"熟人"的投资建议', '涉及金钱往来务必核实', '发现异常及时止损'],
+            signs: ['网恋对象提投资', '有内幕消息', '无法见面', '频繁要钱']
+        },
+        ai_voice_fraud: {
+            name: 'AI诈骗', icon: '🤖', level: 4,
+            techniques: ['通过AI合成子女或熟人的声音', '声称遭遇紧急情况急需用钱', '制造紧迫感不让你核实', '诱导快速转账'],
+            tips: ['遇到紧急汇款请求务必电话核实', '多问几个只有熟人才知道的问题', 'AI声音可能与真人非常相似', '保持冷静，不被紧迫感操控'],
+            signs: ['紧急情况', '要求保密', '只能转账', '声音略微异常']
+        },
+        loan_fraud: {
+            name: '虚假贷款诈骗', icon: '🏦', level: 3,
+            techniques: ['在网络发布无抵押贷款广告', '声称审核快速、下款快', '以银行卡号错误为由要求缴纳解冻费', '诱导不断转账各种费用'],
+            tips: ['正规贷款不需要提前缴费', '警惕"无抵押、无征信"的贷款', '核实贷款平台资质', '银行卡号错误不会导致资金冻结'],
+            signs: ['需要预付费用', '银行卡号错误', '诱导借贷', '无法联系客服']
+        },
+        refund_fraud: {
+            name: '购物退款诈骗', icon: '📦', level: 2,
+            techniques: ['声称订单异常或快递丢失', '主动提出双倍赔偿', '诱导开启屏幕共享', '骗取验证码后转走资金'],
+            tips: ['购物退款通过官方渠道操作', '不要开启屏幕共享', '不向任何人透露验证码', '快递异常可自行查询物流'],
+            signs: ['主动赔偿', '要求屏幕共享', '索要验证码', '诱导借贷']
+        },
+        credit_fraud: {
+            name: '虚假征信诈骗', icon: '📊', level: 2,
+            techniques: ['声称可以修复或洗白征信记录', '收取高额服务费后消失', '诱导提供个人信息', '声称有关系能走后门'],
+            tips: ['征信记录无法人为修改', '如有不良记录只能通过正规途径消除', '不轻信"征信修复"广告', '保护好个人隐私信息'],
+            signs: ['声称能洗白征信', '收取高额费用', '要求提供密码', '声称有关系']
+        },
+        gaming_fraud: {
+            name: '游戏交易诈骗', icon: '🎮', level: 2,
+            techniques: ['在游戏中低价出售装备账号', '引导到私下交易平台', '收款后不发货或发假货', '以解封费等理由继续诈骗'],
+            tips: ['游戏交易选择官方平台', '不要私下转账', '警惕低价诱惑', '账号交易有风险'],
+            signs: ['私下交易', '价格异常低', '要求转账', '账号被找回']
+        },
+        fan_fraud: {
+            name: '追星诈骗', icon: '⭐', level: 2,
+            techniques: ['在粉丝群假冒明星助理', '声称有内部福利或演唱会门票', '诱导转账或提供个人信息', '以中奖为由收取手续费'],
+            tips: ['明星不会向粉丝要钱', '福利活动通过官方渠道参与', '不轻信群里的转账要求', '保护好个人信息'],
+            signs: ['假冒助理', '内部福利', '中奖缴费', '诱导转账']
+        },
+        medical_fraud: {
+            name: '医保诈骗', icon: '🏥', level: 3,
+            techniques: ['声称医保卡被盗用或异地报销', '要求将医保账户资金转移到安全账户', '假冒医保局工作人员', '诱导提供银行卡信息'],
+            tips: ['医保部门不会电话索要银行信息', '医保卡被盗用可直接报警', '不要向陌生人转账', '有疑问到医保局核实'],
+            signs: ['医保卡异常', '要求转账', '索要密码', '制造恐慌']
+        },
+        deepfake_fraud: {
+            name: '深度伪造诈骗', icon: '🎭', level: 4,
+            techniques: ['利用AI换脸技术伪造视频', '假冒领导或名人要求转账', '通过视频通话制造信任', '诱导大额转账'],
+            tips: ['视频通话也可能被伪造', '涉及大额转账务必多渠道核实', '领导不会通过私人社交账号要求转账', '发现异常立即报警'],
+            signs: ['视频中行为异常', '要求转账到私人账户', '紧急指令', '无法回拨']
+        }
+    };
+    var d = details[id] || details.police_impersonation;
+    var html = '<button class="form-btn" style="margin:0 16px 12px;background:var(--bg-tertiary);color:var(--text-secondary);" onclick="closeLearnDetail()">← 返回</button>';
+    html += '<div class="m-detail-section">';
+    html += '<div class="m-detail-header"><span class="m-detail-icon">' + d.icon + '</span><div><div class="m-detail-name">' + d.name + '</div><span class="m-risk-badge level-' + Math.min(d.level, 4) + '">' + (d.level >= 3 ? '高风险' : '中风险') + '</span></div></div>';
+    html += '<div class="m-detail-body">';
+    html += '<div class="m-detail-subtitle">📌 常见套路</div><ul class="m-detail-list">';
+    d.techniques.forEach(function(t) { html += '<li>' + t + '</li>'; });
+    html += '</ul>';
+    html += '<div class="m-detail-subtitle">🛡️ 防范技巧</div><ul class="m-detail-list">';
+    d.tips.forEach(function(t) { html += '<li>' + t + '</li>'; });
+    html += '</ul>';
+    html += '<div class="m-detail-subtitle">⚠️ 预警信号</div><ul class="m-detail-list">';
+    d.signs.forEach(function(t) { html += '<li>' + t + '</li>'; });
+    html += '</ul></div></div>';
+    document.getElementById('mLearnDetail').innerHTML = html;
+    document.getElementById('mLearnList').style.display = 'none';
+    document.getElementById('mLearnDetail').style.display = 'block';
+    pageStack.push('pageLearnDetail');
+}
+
+function closeLearnDetail() {
+    document.getElementById('mLearnList').style.display = 'block';
+    document.getElementById('mLearnDetail').style.display = 'none';
+    pageStack = ['pageHome'];
+}
+
+// ====== 举报 ======
+var selectedReportType = '';
+var reportTypes = [
+    { id: 'police_impersonation', name: '冒充公检法', icon: '🚔' },
+    { id: 'investment_fraud', name: '投资理财诈骗', icon: '💰' },
+    { id: 'part_time_fraud', name: '兼职刷单诈骗', icon: '💼' },
+    { id: 'pig_butchery', name: '杀猪盘诈骗', icon: '💔' },
+    { id: 'ai_voice_fraud', name: 'AI诈骗', icon: '🤖' },
+    { id: 'loan_fraud', name: '虚假贷款诈骗', icon: '🏦' },
+    { id: 'refund_fraud', name: '购物退款诈骗', icon: '📦' },
+    { id: 'credit_fraud', name: '虚假征信诈骗', icon: '📊' },
+    { id: 'gaming_fraud', name: '游戏交易诈骗', icon: '🎮' },
+    { id: 'fan_fraud', name: '追星诈骗', icon: '⭐' },
+    { id: 'medical_fraud', name: '医保诈骗', icon: '🏥' },
+    { id: 'deepfake_fraud', name: '深度伪造诈骗', icon: '🎭' }
+];
+
+function initReportTypes() {
+    var html = '';
+    reportTypes.forEach(function(t) {
+        html += '<div class="m-type-item" data-type="' + t.id + '" onclick="selectReportType(this, \'' + t.id + '\')">' +
+            '<span class="icon">' + t.icon + '</span><span class="name">' + t.name + '</span></div>';
+    });
+    document.getElementById('mReportTypeGrid').innerHTML = html;
+}
+
+function selectReportType(el, id) {
+    document.querySelectorAll('.m-type-item').forEach(function(i) { i.classList.remove('selected'); });
+    el.classList.add('selected');
+    selectedReportType = id;
+}
+
+async function submitReport() {
+    var content = document.getElementById('mReportContent').value.trim();
+    if (!selectedReportType) { showToast('请选择诈骗类型', 'error'); return; }
+    if (!content) { showToast('请填写骗子话术内容', 'error'); return; }
+    showLoading('提交中...');
+    try {
+        var res = await fetch(getApiBase() + '/reports/submit', {
+            method: 'POST', headers: { 'Authorization': 'Bearer ' + currentToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                scam_type: selectedReportType,
+                content: content,
+                title: document.getElementById('mReportContent').value.substring(0, 50),
+                scammer_contact: document.getElementById('mReportContact').value,
+                scammer_account: document.getElementById('mReportAccount').value,
+                amount: parseFloat(document.getElementById('mReportAmount').value) || 0
+            })
+        });
+        var data = await res.json();
+        hideLoading();
+        if (res.ok) {
+            showToast('举报提交成功，感谢您的参与！', 'success');
+            document.getElementById('mReportContent').value = '';
+            document.getElementById('mReportContact').value = '';
+            document.getElementById('mReportAccount').value = '';
+            document.getElementById('mReportAmount').value = '';
+            document.querySelectorAll('.m-type-item').forEach(function(i) { i.classList.remove('selected'); });
+            selectedReportType = '';
+        } else {
+            showToast(data.detail || '提交失败', 'error');
+        }
+    } catch (e) {
+        hideLoading();
+        showToast('提交失败，请稍后重试', 'error');
+    }
+}
+
+async function switchReportTab(tab) {
+    document.querySelectorAll('#pageReport .m-tab').forEach(function(t) { t.classList.remove('active'); });
+    event.target.classList.add('active');
+    document.getElementById('mReportSubmit').style.display = tab === 'submit' ? '' : 'none';
+    document.getElementById('mReportHistory').style.display = tab === 'history' ? '' : 'none';
+    document.getElementById('mReportStats').style.display = tab === 'stats' ? '' : 'none';
+    if (tab === 'history') loadReportHistory();
+    if (tab === 'stats') loadReportStats();
+}
+
+async function loadReportHistory() {
+    try {
+        var res = await fetch(getApiBase() + '/reports/my-reports', { headers: { 'Authorization': 'Bearer ' + currentToken } });
+        var data = await res.json();
+        var html = '';
+        if (data.reports && data.reports.length > 0) {
+            data.reports.forEach(function(r) {
+                var typeInfo = reportTypes.find(function(t) { return t.id === r.scam_type; });
+                html += '<div class="m-report-item" onclick="showReportDetail(\'' + r.id + '\')">' +
+                    '<div class="m-report-header"><span class="m-report-type">' + (typeInfo ? typeInfo.icon : '📤') + ' ' + (typeInfo ? typeInfo.name : r.scam_type) + '</span>' +
+                    '<span class="m-report-status ' + (r.status || 'pending') + '">' + (r.status === 'verified' ? '已核实' : (r.status === 'rejected' ? '已驳回' : '待处理')) + '</span></div>' +
+                    '<div class="m-report-content">' + (r.content || r.title || '').substring(0, 80) + '</div>' +
+                    '<div class="m-report-time">' + formatTime(r.created_at) + '</div></div>';
+            });
+        } else {
+            html = '<div class="m-empty"><div class="m-empty-icon">📋</div><div class="m-empty-text">暂无举报记录</div></div>';
+        }
+        document.getElementById('mReportList').innerHTML = html;
+    } catch (e) {
+        document.getElementById('mReportList').innerHTML = '<div class="m-empty"><div class="m-empty-icon">⚠️</div><div class="m-empty-text">加载失败</div></div>';
+    }
+}
+
+async function loadReportStats() {
+    try {
+        var res = await fetch(getApiBase() + '/reports/statistics/summary', { headers: { 'Authorization': 'Bearer ' + currentToken } });
+        var data = await res.json();
+        var html = '<div class="m-stats-grid">';
+        html += '<div class="m-stat-item"><div class="m-stat-value">' + (data.total || 0) + '</div><div class="m-stat-label">总举报数</div></div>';
+        html += '<div class="m-stat-item"><div class="m-stat-value" style="color:var(--warning);">' + (data.pending || 0) + '</div><div class="m-stat-label">待处理</div></div>';
+        html += '<div class="m-stat-item"><div class="m-stat-value" style="color:var(--success);">' + (data.verified || 0) + '</div><div class="m-stat-label">已核实</div></div>';
+        html += '<div class="m-stat-item"><div class="m-stat-value" style="color:var(--primary-light);">' + (data.learned || 0) + '</div><div class="m-stat-label">已学习</div></div></div>';
+        document.getElementById('mReportStatsContent').innerHTML = html;
+    } catch (e) {
+        document.getElementById('mReportStatsContent').innerHTML = '<div class="m-empty"><div class="m-empty-icon">⚠️</div><div class="m-empty-text">加载失败</div></div>';
+    }
+}
+
+// ====== 个人中心 ======
+async function loadUserProfile() {
+    try {
+        var res = await fetch(getApiBase() + '/profile/', { headers: { 'Authorization': 'Bearer ' + currentToken } });
+        var data = await res.json();
+        if (data.profile) {
+            var p = data.profile;
+            var stats = data.stats || {};
+            document.getElementById('mProfileCard').innerHTML =
+                '<div class="m-avatar">' + (p.nickname ? p.nickname.charAt(0).toUpperCase() : 'U') + '</div>' +
+                '<div class="m-username">' + (p.nickname || currentUser.username) + '</div>' +
+                '<div class="m-useremail">' + (currentUser.email || currentUser.username) + '</div>' +
+                '<div class="m-profile-stats">' +
+                '<div class="m-profile-stat"><div class="m-profile-stat-val">' + (stats.total_consultations || 0) + '</div><div class="m-profile-stat-label">咨询次数</div></div>' +
+                '<div class="m-profile-stat"><div class="m-profile-stat-val">' + (stats.family_protected || 0) + '</div><div class="m-profile-stat-label">受保护家人</div></div>' +
+                '<div class="m-profile-stat"><div class="m-profile-stat-val">' + (p.risk_awareness || 50) + '</div><div class="m-profile-stat-label">反诈意识</div></div>' +
+                '</div>';
+        }
+    } catch (e) { /* ignore */ }
+}
+
+function loadMineProfile() {
+    loadUserProfile();
+}
+
+async function saveProfile() {
+    var nickname = document.getElementById('mEditNickname').value;
+    var bio = document.getElementById('mEditBio').value;
+    var age_group = document.getElementById('mEditAge').value;
+    var occupation = document.getElementById('mEditOccupation').value;
+    var gender = document.getElementById('mEditGender').value;
+    showLoading('保存中...');
+    try {
+        var res = await fetch(getApiBase() + '/profile/', {
+            method: 'PUT', headers: { 'Authorization': 'Bearer ' + currentToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nickname: nickname, bio: bio, age_group: age_group, occupation: occupation, gender: gender })
+        });
+        hideLoading();
+        if (res.ok) { showToast('资料保存成功', 'success'); goBack(); }
+        else { showToast('保存失败', 'error'); }
+    } catch (e) { hideLoading(); showToast('保存失败', 'error'); }
+}
+
+// ====== 监护人管理 ======
+async function loadGuardians() {
+    try {
+        var res = await fetch(getApiBase() + '/guardians/', { headers: { 'Authorization': 'Bearer ' + currentToken } });
+        var data = await res.json();
+        var html = '';
+        if (data.guardians && data.guardians.length > 0) {
+            data.guardians.forEach(function(g) {
+                var badges = '';
+                if (g.is_active) badges += '<span class="m-risk-badge level-0" style="font-size:10px;padding:2px 8px;">已激活</span>';
+                else badges += '<span class="m-risk-badge level-2" style="font-size:10px;padding:2px 8px;">未激活</span>';
+                html += '<div class="m-guardian-item">' +
+                    '<div class="m-guardian-avatar">👤</div>' +
+                    '<div class="m-guardian-info"><div class="m-guardian-name">' + (g.name || g.linked_username || '监护人') + ' <span style="font-size:12px;color:var(--text-muted);">' + g.relationship + '</span></div>' +
+                    '<div class="m-guardian-meta">' + (g.phone || '') + ' ' + badges + '</div></div>' +
+                    '<div class="m-guardian-actions"><button class="m-btn-sm m-btn-danger" onclick="removeGuardian(\'' + g.id + '\')">删除</button></div>' +
+                    '</div>';
+            });
+        } else {
+            html = '<div class="m-empty"><div class="m-empty-icon">👨‍👩‍👧</div><div class="m-empty-text">暂无监护人，点击下方添加</div></div>';
+        }
+        document.getElementById('mGuardianList').innerHTML = html;
+
+        // 加载发出的邀请
+        var res2 = await fetch(getApiBase() + '/guardians/invitations/sent', { headers: { 'Authorization': 'Bearer ' + currentToken } });
+        var data2 = await res2.json();
+        var html2 = '';
+        if (data2.invitations && data2.invitations.length > 0) {
+            data2.invitations.forEach(function(inv) {
+                html2 += '<div class="m-guardian-item">' +
+                    '<div class="m-guardian-avatar">📨</div>' +
+                    '<div class="m-guardian-info"><div class="m-guardian-name">邀请 ' + (inv.invitee_username || inv.invitee_id) + '</div>' +
+                    '<div class="m-guardian-meta">' + inv.relationship + ' | ' + (inv.status === 'pending' ? '待回复' : (inv.status === 'accepted' ? '已接受' : '已拒绝')) + '</div></div></div>';
+            });
+        } else {
+            html2 = '<div class="m-empty"><div class="m-empty-icon">📨</div><div class="m-empty-text">暂无发出的邀请</div></div>';
+        }
+        document.getElementById('mGuardianSent').innerHTML = html2;
+
+        // 加载收到的邀请
+        var res3 = await fetch(getApiBase() + '/guardians/invitations/received', { headers: { 'Authorization': 'Bearer ' + currentToken } });
+        var data3 = await res3.json();
+        var html3 = '';
+        if (data3.invitations && data3.invitations.length > 0) {
+            data3.invitations.forEach(function(inv) {
+                html3 += '<div class="m-guardian-item">' +
+                    '<div class="m-guardian-avatar">📩</div>' +
+                    '<div class="m-guardian-info"><div class="m-guardian-name">' + (inv.inviter_username || inv.inviter_id) + ' 邀请您成为监护人</div>' +
+                    '<div class="m-guardian-meta">' + inv.relationship + '</div></div>' +
+                    '<div class="m-guardian-actions">' +
+                    '<button class="m-btn-sm m-btn-primary" onclick="respondInvitation(\'' + inv.id + '\', true)">接受</button>' +
+                    '<button class="m-btn-sm m-btn-danger" onclick="respondInvitation(\'' + inv.id + '\', false)">拒绝</button></div>' +
+                    '</div>';
+            });
+        } else {
+            html3 = '<div class="m-empty"><div class="m-empty-icon">📩</div><div class="m-empty-text">暂无收到的邀请</div></div>';
+        }
+        document.getElementById('mGuardianReceived').innerHTML = html3;
+    } catch (e) {
+        document.getElementById('mGuardianList').innerHTML = '<div class="m-empty"><div class="m-empty-icon">⚠️</div><div class="m-empty-text">加载失败</div></div>';
+    }
+}
+
+function switchGuardianTab(tab) {
+    document.querySelectorAll('#pageGuardian .m-tab').forEach(function(t) { t.classList.remove('active'); });
+    event.target.classList.add('active');
+    document.getElementById('mGuardianList').style.display = tab === 'list' ? '' : 'none';
+    document.getElementById('mGuardianSent').style.display = tab === 'sent' ? '' : 'none';
+    document.getElementById('mGuardianReceived').style.display = tab === 'received' ? '' : 'none';
+}
+
+function openGuardianForm() {
+    document.getElementById('mGuardianFormModal').classList.add('show');
+}
+
+function closeGuardianFormModal() { document.getElementById('mGuardianFormModal').classList.remove('show'); }
+
+async function submitGuardian() {
+    var relationship = document.getElementById('mGuardianRel').value;
+    var linked_username = document.getElementById('mGuardianUser').value.trim();
+    if (!linked_username) { showToast('请输入对方用户名', 'error'); return; }
+    showLoading('添加中...');
+    try {
+        var res = await fetch(getApiBase() + '/guardians/', {
+            method: 'POST', headers: { 'Authorization': 'Bearer ' + currentToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ relationship: relationship, linked_username: linked_username, notification_level: document.getElementById('mGuardianLevel').value })
+        });
+        var data = await res.json();
+        hideLoading();
+        if (res.ok) { showToast('监护人添加成功', 'success'); closeGuardianFormModal(); loadGuardians(); }
+        else { showToast(data.detail || '添加失败', 'error'); }
+    } catch (e) { hideLoading(); showToast('添加失败', 'error'); }
+}
+
+async function removeGuardian(id) {
+    if (!confirm('确定删除该监护人？')) return;
+    try {
+        await fetch(getApiBase() + '/guardians/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + currentToken } });
+        showToast('已删除', 'success'); loadGuardians();
+    } catch (e) { showToast('删除失败', 'error'); }
+}
+
+async function respondInvitation(id, accept) {
+    var action = accept ? 'accept' : 'reject';
+    try {
+        await fetch(getApiBase() + '/guardians/invitations/' + id + '/' + action, { method: 'POST', headers: { 'Authorization': 'Bearer ' + currentToken } });
+        showToast(accept ? '已接受' : '已拒绝', 'success'); loadGuardians();
+    } catch (e) { showToast('操作失败', 'error'); }
+}
+
+// ====== 历史记录 ======
+var _historyDetailSessionId = null; // 当前在历史页面查看的会话ID
+
+async function loadHistory() {
+    _historyDetailSessionId = null; // 重置
+    // 恢复标题
+    document.getElementById('mHistoryTitle').textContent = '📋 历史记录';
+    var backBtn = document.getElementById('mHistoryBackBtn');
+    if (backBtn) backBtn.style.display = 'none';
+
+    try {
+        var res = await fetch(getApiBase() + '/conversations/sessions?limit=20', { headers: { 'Authorization': 'Bearer ' + currentToken } });
+        var data = await res.json();
+        var html = '';
+        if (data.sessions && data.sessions.length > 0) {
+            var groups = { risk: [], chat: [], learn: [] };
+            data.sessions.forEach(function(s) {
+                var m = s.mode || 'risk';
+                if (!groups[m]) groups[m] = [];
+                groups[m].push(s);
+            });
+            var modeLabels = { risk: '🔍 风险分析', chat: '💬 反诈助手', learn: '📚 知识百科' };
+            ['risk', 'chat', 'learn'].forEach(function(m) {
+                if (groups[m].length === 0) return;
+                html += '<div style="padding:8px 16px 4px;font-size:12px;font-weight:600;color:var(--text-secondary);">' + modeLabels[m] + '</div>';
+                groups[m].forEach(function(s) {
+                    html += '<div class="m-history-item" onclick="openHistorySession(\'' + s.session_id + '\', \'' + m + '\')">' +
+                        '<div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">' + formatTime(s.updated_at) + '</div>' +
+                        '<div style="font-size:14px;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(s.keywords || '会话') + '</div>' +
+                        '<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">' + (s.message_count || 0) + ' 条消息</div></div>';
+                });
+            });
+        } else {
+            html = '<div class="m-empty"><div class="m-empty-icon">📋</div><div class="m-empty-text">暂无历史记录</div></div>';
+        }
+        document.getElementById('mHistoryContent').innerHTML = html;
+    } catch (e) {
+        document.getElementById('mHistoryContent').innerHTML = '<div class="m-empty"><div class="m-empty-icon">⚠️</div><div class="m-empty-text">加载失败: ' + (e.message || '') + '</div></div>';
+    }
+}
+
+// 打开某个历史会话详情（在历史页面内展示）
+async function openHistorySession(sessionId, mode) {
+    _historyDetailSessionId = sessionId;
+    // 显示返回按钮和标题
+    var headerEl = document.getElementById('mHistoryHeader');
+    var modeLabels = { risk: '🔍 风险分析', chat: '💬 反诈助手', learn: '📚 知识百科' };
+    document.getElementById('mHistoryTitle').textContent = modeLabels[mode] || '会话详情';
+    // 注入返回按钮
+    if (!document.getElementById('mHistoryBackBtn')) {
+        var btn = document.createElement('button');
+        btn.id = 'mHistoryBackBtn';
+        btn.style.cssText = 'position:absolute;right:16px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--primary);font-size:14px;cursor:pointer;';
+        btn.textContent = '← 返回';
+        btn.onclick = function() { closeHistorySession(); };
+        headerEl.style.position = 'relative';
+        headerEl.appendChild(btn);
+    } else {
+        document.getElementById('mHistoryBackBtn').style.display = 'block';
+    }
+
+    var container = document.getElementById('mHistoryContent');
+    container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);">加载中...</div>';
+
+    try {
+        var res = await fetch(getApiBase() + '/conversations/messages?session_id=' + encodeURIComponent(sessionId) + '&limit=50', {
+            headers: { 'Authorization': 'Bearer ' + currentToken }
+        });
+        var data = await res.json();
+        if (data.messages && data.messages.length > 0) {
+            var html = '';
+            data.messages.forEach(function(m) {
+                if (m.role === 'user') {
+                    html += '<div style="display:flex;justify-content:flex-end;padding:6px 16px;"><div style="max-width:75%;background:var(--primary);color:white;padding:10px 14px;border-radius:16px 16px 4px 16px;font-size:14px;word-break:break-all;">' + escapeHtml(m.content || '') + '</div></div>';
+                } else if (m.role === 'assistant') {
+                    var riskHtml = '';
+                    if (m.metadata && m.metadata.risk_level != null) {
+                        var lvl = m.metadata.risk_level;
+                        var labels = ['安全', '关注', '警告', '危险', '紧急'];
+                        riskHtml = '<div style="display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;margin-bottom:6px;background:' + (lvl >= 3 ? 'rgba(239,68,68,0.15);color:#ef4444' : lvl >= 2 ? 'rgba(234,179,8,0.15);color:#eab308' : 'rgba(34,197,94,0.15);color:#22c55e') + '">' + labels[Math.min(lvl, 4)] + '</div>';
+                    }
+                    html += '<div style="padding:6px 16px;"><div style="background:var(--bg-secondary);padding:12px 14px;border-radius:4px 16px 16px 16px;font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-all;">' + riskHtml + (m.content || '').replace(/\n/g, '<br>') + '</div></div>';
+                }
+            });
+            container.innerHTML = html || '<div class="m-empty"><div class="m-empty-icon">📋</div><div class="m-empty-text">暂无消息</div></div>';
+        } else {
+            container.innerHTML = '<div class="m-empty"><div class="m-empty-icon">📋</div><div class="m-empty-text">暂无消息记录</div></div>';
+        }
+    } catch (e) {
+        container.innerHTML = '<div class="m-empty"><div class="m-empty-icon">⚠️</div><div class="m-empty-text">加载失败</div></div>';
+    }
+}
+
+function closeHistorySession() {
+    _historyDetailSessionId = null;
+    document.getElementById('mHistoryTitle').textContent = '📋 历史记录';
+    var backBtn = document.getElementById('mHistoryBackBtn');
+    if (backBtn) backBtn.style.display = 'none';
+    loadHistory();
+}
+
+function switchToSession(sessionId, mode) {
+    // 不再覆盖首页对话，跳转到首页继续当前会话
+    document.querySelectorAll('.m-nav-item').forEach(function(n) { n.classList.remove('active'); });
+    mNavTo('pageHome');
+}
+
+// ====== 安全报告 ======
+async function loadReport2(type) {
+    document.querySelectorAll('#pageReport2 .m-tab').forEach(function(t) { t.classList.remove('active'); });
+    event.target && event.target.classList.add('active');
+    showLoading('加载中...');
+    try {
+        var res = await fetch(getApiBase() + '/reports/summary', { headers: { 'Authorization': 'Bearer ' + currentToken } });
+        var data = await res.json();
+        hideLoading();
+        var html = '<div class="m-stats-grid">';
+        html += '<div class="m-stat-item"><div class="m-stat-value" style="color:var(--success);">' + (data.protection_score || 0) + '</div><div class="m-stat-label">防护评分</div></div>';
+        html += '<div class="m-stat-item"><div class="m-stat-value">' + (data.total_alerts || 0) + '</div><div class="m-stat-label">预警总数</div></div>';
+        html += '<div class="m-stat-item"><div class="m-stat-value" style="color:var(--danger);">' + (data.high_risk_alerts || 0) + '</div><div class="m-stat-label">高风险预警</div></div>';
+        html += '<div class="m-stat-item"><div class="m-stat-value" style="color:var(--primary-light);">' + (data.guardian_count || 0) + '</div><div class="m-stat-label">监护人数</div></div></div>';
+        if (data.dominant_risk) {
+            html += '<div class="m-card"><div class="m-card-title">📊 主要风险类型</div><div style="font-size:14px;color:var(--text-secondary);">最常见的诈骗类型：<strong style="color:var(--text-primary);">' + data.dominant_risk + '</strong></div></div>';
+        }
+        document.getElementById('mReport2Content').innerHTML = html;
+    } catch (e) {
+        hideLoading();
+        document.getElementById('mReport2Content').innerHTML = '<div class="m-empty"><div class="m-empty-icon">⚠️</div><div class="m-empty-text">加载失败</div></div>';
+    }
+}
+
+function switchReport2Tab(tab) {
+    document.querySelectorAll('#pageReport2 .m-tab').forEach(function(t) { t.classList.remove('active'); });
+    event.target.classList.add('active');
+    loadReport2(tab);
+}
+
+// ====== 邮件监控 ======
+async function loadEmailConfigs() {
+    try {
+        var res = await fetch(getApiBase() + '/email/configs', { headers: { 'Authorization': 'Bearer ' + currentToken } });
+        var data = await res.json();
+        var html = '';
+        if (data.configs && data.configs.length > 0) {
+            data.configs.forEach(function(c) {
+                html += '<div class="m-guardian-item">' +
+                    '<div class="m-guardian-avatar" style="background:var(--gradient-primary);">📧</div>' +
+                    '<div class="m-guardian-info"><div class="m-guardian-name">' + c.email_address + '</div>' +
+                    '<div class="m-guardian-meta">' + (c.is_active ? '<span style="color:var(--success);">● 监控中</span>' : '<span style="color:var(--text-muted);">○ 已停止</span>') + '</div></div>' +
+                    '<div class="m-guardian-actions"><button class="m-btn-sm m-btn-secondary" onclick="toggleEmailMonitor(\'' + c.id + '\', ' + !c.is_active + ')">' + (c.is_active ? '停止' : '启动') + '</button></div>' +
+                    '</div>';
+            });
+        } else {
+            html = '<div class="m-empty"><div class="m-empty-icon">📧</div><div class="m-empty-text">暂无邮件监控配置</div></div>';
+        }
+        document.getElementById('mEmailConfigList').innerHTML = html;
+    } catch (e) {
+        document.getElementById('mEmailConfigList').innerHTML = '<div class="m-empty"><div class="m-empty-icon">⚠️</div><div class="m-empty-text">加载失败</div></div>';
+    }
+}
+
+function openEmailForm() { document.getElementById('mEmailModal').classList.add('show'); }
+function closeEmailModal() { document.getElementById('mEmailModal').classList.remove('show'); }
+
+async function submitEmailConfig() {
+    var email = document.getElementById('mEmailAddr').value.trim();
+    var user = document.getElementById('mEmailUser').value.trim();
+    var pwd = document.getElementById('mEmailPwd').value;
+    if (!email || !user || !pwd) { showToast('请填写完整信息', 'error'); return; }
+    showLoading('添加中...');
+    try {
+        var res = await fetch(getApiBase() + '/email/configs', {
+            method: 'POST', headers: { 'Authorization': 'Bearer ' + currentToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email_address: email, username: user, password: pwd })
+        });
+        var data = await res.json();
+        hideLoading();
+        if (res.ok) { showToast('邮箱添加成功', 'success'); closeEmailModal(); loadEmailConfigs(); }
+        else { showToast(data.detail || '添加失败', 'error'); }
+    } catch (e) { hideLoading(); showToast('添加失败', 'error'); }
+}
+
+async function toggleEmailMonitor(id, active) {
+    try {
+        await fetch(getApiBase() + '/email/configs/' + id + '/toggle', {
+            method: 'POST', headers: { 'Authorization': 'Bearer ' + currentToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_active: active })
+        });
+        showToast(active ? '已启动监控' : '已停止监控', 'success'); loadEmailConfigs();
+    } catch (e) { showToast('操作失败', 'error'); }
+}
+
+// ====== 通知设置 ======
+function loadSettingsInfo() {
+    if (currentUser) {
+        document.getElementById('mAccountInfo').textContent = currentUser.email || currentUser.username;
+        if (currentUser.created_at) {
+            document.getElementById('mRegTime').textContent = formatDate(currentUser.created_at);
+        }
+    }
+}
+
+function toggleSetting(key, btn) {
+    btn.classList.toggle('on');
+    showToast('设置已更新', 'success');
+}
+
+// ====== 模态框 ======
+function showGuardianModal(assessment) {
+    var levelLabels = ['安全', '关注', '警告', '危险', '紧急'];
+    var lvl = assessment.risk_level || 0;
+    var typeMap = {
+        'police_impersonation': '冒充公检法诈骗',
+        'investment_fraud': '投资理财诈骗',
+        'loan_fraud': '虚假贷款诈骗',
+        'phishing': '钓鱼诈骗',
+        'social_engineering': '社交工程诈骗',
+        'online_shopping': '网购诈骗',
+        'impersonation_fraud': '冒充熟人诈骗',
+        'normal': '常规'
+    };
+    var riskTypeName = typeMap[assessment.risk_type] || assessment.risk_type || '未知风险';
+    document.getElementById('mGuardianMsg').textContent =
+        '检测到【' + levelLabels[lvl] + '】风险：' + (assessment.suggestion || '建议停止操作并核实对方身份。');
+    document.getElementById('mGuardianDetail').innerHTML =
+        '<strong>' + riskTypeName + '</strong> — ' + (assessment.analysis || '系统检测到可疑内容，请保持警惕。');
+    document.getElementById('mGuardianModal').classList.add('show');
+}
+
+function closeGuardianModal() { document.getElementById('mGuardianModal').classList.remove('show'); }
+function closeHelpModal() { document.getElementById('mHelpModal').classList.remove('show'); }
+function showHelp() { document.getElementById('mHelpModal').classList.add('show'); }
+function closeReportDetailModal() { document.getElementById('mReportDetailModal').classList.remove('show'); }
+
+function showReportDetail(id) {
+    document.getElementById('mReportDetailBody').innerHTML = '<div style="font-size:14px;color:var(--text-secondary);line-height:1.6;"><p>举报ID: ' + id + '</p></div>';
+    document.getElementById('mReportDetailModal').classList.add('show');
+}
+
+// ====== 工具函数 ======
+function formatTime(ts) {
+    if (!ts) return '';
+    var d = new Date(ts * 1000);
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+
+function formatDate(ts) {
+    if (!ts) return '';
+    var d = new Date(ts * 1000);
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function autoResizeTextarea() {
+    var ta = document.getElementById('mInput');
+    if (!ta) return;
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+}
+
+// 回车发送
+document.addEventListener('DOMContentLoaded', function() {
+    var ta = document.getElementById('mInput');
+    if (ta) {
+        ta.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMMsg();
+            }
+        });
+        ta.addEventListener('input', autoResizeTextarea);
+    }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SmartGuard</string>
+    <string name="title_activity_main">SmartGuard</string>
+    <string name="package_name">com.smartguard.app</string>
+    <string name="custom_url_scheme">com.smartguard.app</string>
+</resources>
